@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --rom-primary: #1B3A5C;
+  --rom-secondary: #2B6CB0;
+  --rom-accent: #3182CE;
+  --rom-bg: #F7FAFC;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--rom-bg);
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #1A202C;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #EDF2F7;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A0AEC0;
+}
+
+/* Table styles */
+.rom-table {
+  @apply w-full text-sm border-collapse;
+}
+.rom-table th {
+  @apply bg-rom-600 text-white font-semibold text-left px-4 py-3 text-xs uppercase tracking-wider;
+}
+.rom-table td {
+  @apply px-4 py-3 border-b border-gray-100;
+}
+.rom-table tr:last-child td {
+  @apply border-b-0;
+}
+.rom-table tbody tr:hover {
+  @apply bg-blue-50;
+}
+
+/* Card styles */
+.rom-card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100;
+}
+
+/* Badge styles */
+.badge-avancement {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}

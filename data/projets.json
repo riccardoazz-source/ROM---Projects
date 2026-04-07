@@ -1,0 +1,333 @@
+{
+  "projets": [
+    {
+      "id": "11-havre-sight-capital",
+      "nom": "11 HAVRE",
+      "client": "SIGHT CAPITAL",
+      "description": "Mission AMO - Projet de réhabilitation 11 rue du Havre",
+      "historiqueChart": [
+        { "date": "06/23", "montantCommandesHT": 590000, "montantFacturesHT": 30000 },
+        { "date": "10/23", "montantCommandesHT": 640000, "montantFacturesHT": 65000 },
+        { "date": "01/24", "montantCommandesHT": 690000, "montantFacturesHT": 110000 },
+        { "date": "04/24", "montantCommandesHT": 715000, "montantFacturesHT": 165000 },
+        { "date": "07/24", "montantCommandesHT": 720000, "montantFacturesHT": 230000 },
+        { "date": "11/24", "montantCommandesHT": 725000, "montantFacturesHT": 295000 },
+        { "date": "02/25", "montantCommandesHT": 725000, "montantFacturesHT": 355000 },
+        { "date": "05/25", "montantCommandesHT": 725000, "montantFacturesHT": 390000 },
+        { "date": "08/25", "montantCommandesHT": 1168378, "montantFacturesHT": 420000 },
+        { "date": "12/25", "montantCommandesHT": 1168378, "montantFacturesHT": 460000 },
+        { "date": "03/26", "montantCommandesHT": 1168378, "montantFacturesHT": 495630 }
+      ],
+      "rapports": [
+        {
+          "date": "20260312",
+          "mois": "Mars 2026",
+          "nombreTotalCommandes": 39,
+          "nombreTotalAvenants": 11,
+          "nombreCommandesActives": 28,
+          "nombreTotalFactures": 63,
+          "montantTotalCommandesHT": 1168378.67,
+          "montantTotalFacturesHT": 495630.18,
+          "totalCommandesHonorairesHT": 1075862.00,
+          "totalCommandesTravauxHT": 0.00,
+          "totalCommandesDiversHT": 92516.67,
+          "totalTVACommandes": 233675.73,
+          "totalTVAFactures": 99126.04,
+          "nombreFacturesAvecRetenue": 0,
+          "montantTotalRetenueGarantieHT": 0.00,
+          "montantTotalCommandesTTC": 1402054.40,
+          "montantTotalFacturesTTC": 594756.22,
+          "pourcentageAvancementMois": 0,
+          "pourcentageAvancementTotal": 42,
+          "facturesMois": [
+            {
+              "factureOuSituation": "BG2602000144",
+              "societe": "GALENA",
+              "dateValidation": "12/03/2026",
+              "montantHT": 1750.00,
+              "tva": 350.00,
+              "montantTTC": 2100.00,
+              "pourcentageFactureSurCommande": 7,
+              "pourcentageAvancementTotal": 38
+            },
+            {
+              "factureOuSituation": "FA26 0281",
+              "societe": "OASIIS",
+              "dateValidation": "12/03/2026",
+              "montantHT": 2240.00,
+              "tva": 448.00,
+              "montantTTC": 2688.00,
+              "pourcentageFactureSurCommande": 2,
+              "pourcentageAvancementTotal": 45
+            }
+          ],
+          "commandes": [
+            { "societe": "ROM", "montantHT": 172000, "lot": "AMO", "type": "honoraires", "valeurHtRestante": 48000, "pourcentageAvancement": 72 },
+            { "societe": "MARTIN HERBET", "montantHT": 350000, "lot": "ARCHITECTE", "type": "honoraires", "valeurHtRestante": 168000, "pourcentageAvancement": 52 },
+            { "societe": "VISORI", "montantHT": 13950, "lot": "Bureau de Contrôle", "type": "honoraires", "valeurHtRestante": 11756, "pourcentageAvancement": 16 },
+            { "societe": "SOL CONSEIL", "montantHT": 26900, "lot": "BE Géotechnique", "type": "honoraires", "valeurHtRestante": 19390, "pourcentageAvancement": 28 },
+            { "societe": "OPTIMUM", "montantHT": 40600, "lot": "BE Structure", "type": "honoraires", "valeurHtRestante": 10620, "pourcentageAvancement": 74 },
+            { "societe": "ITMR", "montantHT": 29000, "lot": "BE Fluides", "type": "honoraires", "valeurHtRestante": 22500, "pourcentageAvancement": 22 },
+            { "societe": "BATISS", "montantHT": 15000, "lot": "BE Incendie", "type": "honoraires", "valeurHtRestante": 4800, "pourcentageAvancement": 68 },
+            { "societe": "GENERAL ACOUSTICS", "montantHT": 7705, "lot": "BE Acoustique", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "SINTEO", "montantHT": 8000, "lot": "AMO DD", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "DAL", "montantHT": 2500, "lot": "Économiste", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "OASIIS", "montantHT": 103200, "lot": "AMO DD 2", "type": "honoraires", "valeurHtRestante": 57180, "pourcentageAvancement": 45 },
+            { "societe": "VISORI", "montantHT": 7990, "lot": "CSPS", "type": "honoraires", "valeurHtRestante": 7990, "pourcentageAvancement": 0 },
+            { "societe": "LS CONSEILS", "montantHT": 3995, "lot": "PEMD", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "OASIIS", "montantHT": 4000, "lot": "Écologue", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "DEKRA", "montantHT": 2362, "lot": "Bilan Patrimoine", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "ARCOS", "montantHT": 259900, "lot": "MOEx et OPC", "type": "honoraires", "valeurHtRestante": 259900, "pourcentageAvancement": 0 },
+            { "societe": "AIDF", "montantHT": 2600, "lot": "Demande Voirie", "type": "honoraires", "valeurHtRestante": 2600, "pourcentageAvancement": 0 },
+            { "societe": "GALENA", "montantHT": 26000, "lot": "MOE Dépollution", "type": "honoraires", "valeurHtRestante": 16000, "pourcentageAvancement": 38 },
+            { "societe": "LANQUETIN", "montantHT": 5100, "lot": "Géomètre", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "BTP", "montantHT": 15215, "lot": "Diagnostic amiante et plomb", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "LANQUETIN", "montantHT": 800, "lot": "Géomètre", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "BOTTE SONDAGES", "montantHT": 20480, "lot": "Sondages Structure", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "GRAPHIC PROCEDE", "montantHT": 205, "lot": "Panneau de Chantier", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "AJM", "montantHT": 3100, "lot": "Maintenance", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "BALAS", "montantHT": 450, "lot": "Maintenance", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "OASIIS", "montantHT": 40000, "lot": "Frais certification", "type": "divers", "valeurHtRestante": 40000, "pourcentageAvancement": 0 },
+            { "societe": "ESI", "montantHT": 5126.67, "lot": "Diagnostic amiante et plomb", "type": "divers", "valeurHtRestante": 1812.49, "pourcentageAvancement": 65 },
+            { "societe": "GALENA", "montantHT": 2200, "lot": "Lingettes plomb", "type": "divers", "valeurHtRestante": 2200, "pourcentageAvancement": 0 }
+          ],
+          "factures": [
+            { "dateFacture": "25/12/2023", "factureOuSituation": "2023/168", "societe": "ROM", "dateValidationAMO": "25/12/2023", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "06/02/2024", "factureOuSituation": "02.24A", "societe": "MARTIN HERBET", "dateValidationAMO": "06/02/2024", "montantHT": 11200, "montantTTC": 13440, "retenueGarantie": 0, "pourcentageFactureSurCommande": 3, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "07/02/2024", "factureOuSituation": "F240219377", "societe": "LANQUETIN", "dateValidationAMO": "15/02/2024", "montantHT": 5100, "montantTTC": 6120, "retenueGarantie": 0, "pourcentageFactureSurCommande": 100, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "20/11/2023", "factureOuSituation": "12.23B", "societe": "MARTIN HERBET", "dateValidationAMO": "15/02/2024", "montantHT": 9600, "montantTTC": 11520, "retenueGarantie": 0, "pourcentageFactureSurCommande": 3, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "25/01/2024", "factureOuSituation": "2024/013", "societe": "ROM", "dateValidationAMO": "15/02/2024", "montantHT": 8000, "montantTTC": 9600, "retenueGarantie": 0, "pourcentageFactureSurCommande": 5, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "13/02/2024", "factureOuSituation": "5635", "societe": "OPTIMUM", "dateValidationAMO": "15/02/2024", "montantHT": 4060, "montantTTC": 4872, "retenueGarantie": 0, "pourcentageFactureSurCommande": 10, "pourcentageAvancementTotal": 74 },
+            { "dateFacture": "21/12/2023", "factureOuSituation": "12.23A", "societe": "MARTIN HERBET", "dateValidationAMO": "15/02/2024", "montantHT": 11200, "montantTTC": 13440, "retenueGarantie": 0, "pourcentageFactureSurCommande": 3, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "29/02/2024", "factureOuSituation": "02.24E", "societe": "MARTIN HERBET", "dateValidationAMO": "29/02/2024", "montantHT": 13200, "montantTTC": 15840, "retenueGarantie": 0, "pourcentageFactureSurCommande": 4, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "29/03/2024", "factureOuSituation": "03.24C", "societe": "MARTIN HERBET", "dateValidationAMO": "29/03/2024", "montantHT": 13200, "montantTTC": 15840, "retenueGarantie": 0, "pourcentageFactureSurCommande": 4, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "21/03/2024", "factureOuSituation": "126225 SC MAS", "societe": "SOL CONSEIL", "dateValidationAMO": "08/04/2024", "montantHT": 7510, "montantTTC": 9012, "retenueGarantie": 0, "pourcentageFactureSurCommande": 28, "pourcentageAvancementTotal": 28 },
+            { "dateFacture": "30/04/2024", "factureOuSituation": "04.24F", "societe": "MARTIN HERBET", "dateValidationAMO": "30/04/2024", "montantHT": 13000, "montantTTC": 15600, "retenueGarantie": 0, "pourcentageFactureSurCommande": 4, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "29/02/2024", "factureOuSituation": "F-DIA92X-30-24-00890", "societe": "BTP", "dateValidationAMO": "02/05/2024", "montantHT": 7290, "montantTTC": 8748, "retenueGarantie": 0, "pourcentageFactureSurCommande": 48, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "27/05/2024", "factureOuSituation": "05.24A", "societe": "MARTIN HERBET", "dateValidationAMO": "27/05/2024", "montantHT": 13000, "montantTTC": 15600, "retenueGarantie": 0, "pourcentageFactureSurCommande": 4, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "25/05/2024", "factureOuSituation": "NH / 2024 / 054", "societe": "ROM", "dateValidationAMO": "06/06/2024", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "07/07/2024", "factureOuSituation": "FT24070050", "societe": "LANQUETIN", "dateValidationAMO": "02/08/2024", "montantHT": 800, "montantTTC": 960, "retenueGarantie": 0, "pourcentageFactureSurCommande": 100, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "31/07/2024", "factureOuSituation": "07.24D", "societe": "MARTIN HERBET", "dateValidationAMO": "02/08/2024", "montantHT": 13600, "montantTTC": 16320, "retenueGarantie": 0, "pourcentageFactureSurCommande": 4, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "30/07/2024", "factureOuSituation": "FA 00631", "societe": "ITMR", "dateValidationAMO": "02/08/2024", "montantHT": 2500, "montantTTC": 3000, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 22 },
+            { "dateFacture": "25/07/2024", "factureOuSituation": "NH / 2024 / 101", "societe": "ROM", "dateValidationAMO": "02/08/2024", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "02/09/2024", "factureOuSituation": "P224F00352", "societe": "BATISS", "dateValidationAMO": "12/09/2024", "montantHT": 7700, "montantTTC": 9240, "retenueGarantie": 0, "pourcentageFactureSurCommande": 51, "pourcentageAvancementTotal": 68 },
+            { "dateFacture": "27/09/2024", "factureOuSituation": "09.24E", "societe": "MARTIN HERBET", "dateValidationAMO": "10/10/2024", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 5, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "25/09/2024", "factureOuSituation": "NH / 2024 / 125", "societe": "ROM", "dateValidationAMO": "10/10/2024", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "16/09/2024", "factureOuSituation": "8339", "societe": "GENERAL ACOUSTICS", "dateValidationAMO": "18/11/2024", "montantHT": 4020, "montantTTC": 4824, "retenueGarantie": 0, "pourcentageFactureSurCommande": 52, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "07/11/2024", "factureOuSituation": "30-24-05499", "societe": "BTP", "dateValidationAMO": "18/11/2024", "montantHT": 765, "montantTTC": 918, "retenueGarantie": 0, "pourcentageFactureSurCommande": 5, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "24/10/2024", "factureOuSituation": "30-24-05148", "societe": "BTP", "dateValidationAMO": "18/11/2024", "montantHT": 7160, "montantTTC": 8592, "retenueGarantie": 0, "pourcentageFactureSurCommande": 47, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "25/11/2024", "factureOuSituation": "NH / 2024 / 159", "societe": "ROM", "dateValidationAMO": "12/12/2024", "montantHT": 16000, "montantTTC": 19200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "29/11/2024", "factureOuSituation": "2024 069 2", "societe": "BOTTE SONDAGES", "dateValidationAMO": "09/01/2025", "montantHT": 10805, "montantTTC": 12966, "retenueGarantie": 0, "pourcentageFactureSurCommande": 53, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "28/11/2024", "factureOuSituation": "8454", "societe": "SINTEO", "dateValidationAMO": "10/02/2025", "montantHT": 8000, "montantTTC": 9600, "retenueGarantie": 0, "pourcentageFactureSurCommande": 100, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "25/01/2025", "factureOuSituation": "NH / 2025 / 005", "societe": "ROM", "dateValidationAMO": "10/02/2025", "montantHT": 20000, "montantTTC": 24000, "retenueGarantie": 0, "pourcentageFactureSurCommande": 12, "pourcentageAvancementTotal": 72 },
+            { "dateFacture": "04/02/2025", "factureOuSituation": "P225F00064", "societe": "BATISS", "dateValidationAMO": "10/02/2025", "montantHT": 2500, "montantTTC": 3000, "retenueGarantie": 0, "pourcentageFactureSurCommande": 17, "pourcentageAvancementTotal": 68 },
+            { "dateFacture": "10/02/2025", "factureOuSituation": "02.25A", "societe": "MARTIN HERBET", "dateValidationAMO": "10/02/2025", "montantHT": 7000, "montantTTC": 8400, "retenueGarantie": 0, "pourcentageFactureSurCommande": 2, "pourcentageAvancementTotal": 52 },
+            { "dateFacture": "31/01/2025", "factureOuSituation": "8454", "societe": "GENERAL ACOUSTICS", "dateValidationAMO": "11/03/2025", "montantHT": 3685, "montantTTC": 4422, "retenueGarantie": 0, "pourcentageFactureSurCommande": 48, "pourcentageAvancementTotal": 100 },
+            { "dateFacture": "31/03/2025", "factureOuSituation": "FA00020937", "societe": "GRAPHIC PROCEDE", "dateValidationAMO": "31/03/2025", "montantHT": 205, "montantTTC": 246, "retenueGarantie": 0, "pourcentageFactureSurCommande": 100, "pourcentageAvancementTotal": 100 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "30frank-namsong",
+      "nom": "30FRANK",
+      "client": "NAMSONG",
+      "description": "Mission AMO - Réhabilitation immeuble 30 rue Frank",
+      "historiqueChart": [
+        { "date": "03/24", "montantCommandesHT": 280000, "montantFacturesHT": 15000 },
+        { "date": "06/24", "montantCommandesHT": 310000, "montantFacturesHT": 45000 },
+        { "date": "09/24", "montantCommandesHT": 315000, "montantFacturesHT": 90000 },
+        { "date": "12/24", "montantCommandesHT": 315000, "montantFacturesHT": 140000 },
+        { "date": "03/25", "montantCommandesHT": 315000, "montantFacturesHT": 185000 }
+      ],
+      "rapports": [
+        {
+          "date": "20250304",
+          "mois": "Mars 2025",
+          "nombreTotalCommandes": 18,
+          "nombreTotalAvenants": 3,
+          "nombreCommandesActives": 15,
+          "nombreTotalFactures": 22,
+          "montantTotalCommandesHT": 315000.00,
+          "montantTotalFacturesHT": 185000.00,
+          "totalCommandesHonorairesHT": 285000.00,
+          "totalCommandesTravauxHT": 0.00,
+          "totalCommandesDiversHT": 30000.00,
+          "totalTVACommandes": 63000.00,
+          "totalTVAFactures": 37000.00,
+          "nombreFacturesAvecRetenue": 0,
+          "montantTotalRetenueGarantieHT": 0.00,
+          "montantTotalCommandesTTC": 378000.00,
+          "montantTotalFacturesTTC": 222000.00,
+          "pourcentageAvancementMois": 3,
+          "pourcentageAvancementTotal": 59,
+          "facturesMois": [
+            {
+              "factureOuSituation": "NH/2025/032",
+              "societe": "ROM",
+              "dateValidation": "04/03/2025",
+              "montantHT": 9000,
+              "tva": 1800,
+              "montantTTC": 10800,
+              "pourcentageFactureSurCommande": 8,
+              "pourcentageAvancementTotal": 65
+            }
+          ],
+          "commandes": [
+            { "societe": "ROM", "montantHT": 95000, "lot": "AMO", "type": "honoraires", "valeurHtRestante": 25000, "pourcentageAvancement": 74 },
+            { "societe": "ARCOS", "montantHT": 120000, "lot": "MOEx et OPC", "type": "honoraires", "valeurHtRestante": 80000, "pourcentageAvancement": 33 },
+            { "societe": "MARTIN HERBET", "montantHT": 70000, "lot": "ARCHITECTE", "type": "honoraires", "valeurHtRestante": 28000, "pourcentageAvancement": 60 },
+            { "societe": "OPTIMUM", "montantHT": 18000, "lot": "BE Structure", "type": "honoraires", "valeurHtRestante": 5000, "pourcentageAvancement": 72 },
+            { "societe": "BATISS", "montantHT": 12000, "lot": "BE Incendie", "type": "honoraires", "valeurHtRestante": 3000, "pourcentageAvancement": 75 },
+            { "societe": "ITMR", "montantHT": 20000, "lot": "BE Fluides", "type": "honoraires", "valeurHtRestante": 12000, "pourcentageAvancement": 40 },
+            { "societe": "BTP", "montantHT": 18000, "lot": "Diagnostic", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "LANQUETIN", "montantHT": 7000, "lot": "Géomètre", "type": "divers", "valeurHtRestante": 2000, "pourcentageAvancement": 71 },
+            { "societe": "OASIIS", "montantHT": 5000, "lot": "Frais divers", "type": "divers", "valeurHtRestante": 5000, "pourcentageAvancement": 0 }
+          ],
+          "factures": [
+            { "dateFacture": "15/04/2024", "factureOuSituation": "NH/2024/008", "societe": "ROM", "dateValidationAMO": "15/04/2024", "montantHT": 9000, "montantTTC": 10800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 65 },
+            { "dateFacture": "20/06/2024", "factureOuSituation": "06.24A", "societe": "MARTIN HERBET", "dateValidationAMO": "20/06/2024", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 20, "pourcentageAvancementTotal": 60 },
+            { "dateFacture": "30/09/2024", "factureOuSituation": "NH/2024/089", "societe": "ROM", "dateValidationAMO": "30/09/2024", "montantHT": 9000, "montantTTC": 10800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 65 },
+            { "dateFacture": "15/12/2024", "factureOuSituation": "NH/2024/142", "societe": "ROM", "dateValidationAMO": "15/12/2024", "montantHT": 9000, "montantTTC": 10800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 65 },
+            { "dateFacture": "04/03/2025", "factureOuSituation": "NH/2025/032", "societe": "ROM", "dateValidationAMO": "04/03/2025", "montantHT": 9000, "montantTTC": 10800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 9, "pourcentageAvancementTotal": 65 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "35abond-left-bank",
+      "nom": "35ABOND",
+      "client": "LEFT BANK",
+      "description": "Mission AMO - Réhabilitation 35 avenue Abond",
+      "historiqueChart": [
+        { "date": "06/25", "montantCommandesHT": 420000, "montantFacturesHT": 20000 },
+        { "date": "09/25", "montantCommandesHT": 450000, "montantFacturesHT": 65000 },
+        { "date": "12/25", "montantCommandesHT": 455000, "montantFacturesHT": 110000 },
+        { "date": "03/26", "montantCommandesHT": 455000, "montantFacturesHT": 148000 }
+      ],
+      "rapports": [
+        {
+          "date": "20260312",
+          "mois": "Mars 2026",
+          "nombreTotalCommandes": 22,
+          "nombreTotalAvenants": 4,
+          "nombreCommandesActives": 18,
+          "nombreTotalFactures": 19,
+          "montantTotalCommandesHT": 455000.00,
+          "montantTotalFacturesHT": 148000.00,
+          "totalCommandesHonorairesHT": 410000.00,
+          "totalCommandesTravauxHT": 0.00,
+          "totalCommandesDiversHT": 45000.00,
+          "totalTVACommandes": 91000.00,
+          "totalTVAFactures": 29600.00,
+          "nombreFacturesAvecRetenue": 0,
+          "montantTotalRetenueGarantieHT": 0.00,
+          "montantTotalCommandesTTC": 546000.00,
+          "montantTotalFacturesTTC": 177600.00,
+          "pourcentageAvancementMois": 2,
+          "pourcentageAvancementTotal": 33,
+          "facturesMois": [
+            {
+              "factureOuSituation": "NH/2026/028",
+              "societe": "ROM",
+              "dateValidation": "12/03/2026",
+              "montantHT": 11000,
+              "tva": 2200,
+              "montantTTC": 13200,
+              "pourcentageFactureSurCommande": 9,
+              "pourcentageAvancementTotal": 33
+            }
+          ],
+          "commandes": [
+            { "societe": "ROM", "montantHT": 105000, "lot": "AMO", "type": "honoraires", "valeurHtRestante": 62000, "pourcentageAvancement": 41 },
+            { "societe": "ARCOS", "montantHT": 160000, "lot": "MOEx et OPC", "type": "honoraires", "valeurHtRestante": 135000, "pourcentageAvancement": 16 },
+            { "societe": "MARTIN HERBET", "montantHT": 90000, "lot": "ARCHITECTE", "type": "honoraires", "valeurHtRestante": 52000, "pourcentageAvancement": 42 },
+            { "societe": "OPTIMUM", "montantHT": 22000, "lot": "BE Structure", "type": "honoraires", "valeurHtRestante": 12000, "pourcentageAvancement": 45 },
+            { "societe": "ITMR", "montantHT": 18000, "lot": "BE Fluides", "type": "honoraires", "valeurHtRestante": 11000, "pourcentageAvancement": 39 },
+            { "societe": "BATISS", "montantHT": 15000, "lot": "BE Incendie", "type": "honoraires", "valeurHtRestante": 8000, "pourcentageAvancement": 47 },
+            { "societe": "BTP", "montantHT": 22000, "lot": "Diagnostic", "type": "divers", "valeurHtRestante": 3000, "pourcentageAvancement": 86 },
+            { "societe": "LANQUETIN", "montantHT": 8000, "lot": "Géomètre", "type": "divers", "valeurHtRestante": 3500, "pourcentageAvancement": 56 },
+            { "societe": "OASIIS", "montantHT": 15000, "lot": "Frais certification", "type": "divers", "valeurHtRestante": 15000, "pourcentageAvancement": 0 }
+          ],
+          "factures": [
+            { "dateFacture": "10/07/2025", "factureOuSituation": "NH/2025/071", "societe": "ROM", "dateValidationAMO": "10/07/2025", "montantHT": 11000, "montantTTC": 13200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 10, "pourcentageAvancementTotal": 33 },
+            { "dateFacture": "15/10/2025", "factureOuSituation": "NH/2025/112", "societe": "ROM", "dateValidationAMO": "15/10/2025", "montantHT": 11000, "montantTTC": 13200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 10, "pourcentageAvancementTotal": 33 },
+            { "dateFacture": "20/12/2025", "factureOuSituation": "NH/2025/156", "societe": "ROM", "dateValidationAMO": "20/12/2025", "montantHT": 11000, "montantTTC": 13200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 10, "pourcentageAvancementTotal": 33 },
+            { "dateFacture": "12/03/2026", "factureOuSituation": "NH/2026/028", "societe": "ROM", "dateValidationAMO": "12/03/2026", "montantHT": 11000, "montantTTC": 13200, "retenueGarantie": 0, "pourcentageFactureSurCommande": 10, "pourcentageAvancementTotal": 33 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plai-sight-capital",
+      "nom": "PLAI",
+      "client": "SIGHT CAPITAL",
+      "description": "Mission AMO - Construction PLAI logements sociaux",
+      "historiqueChart": [
+        { "date": "09/24", "montantCommandesHT": 520000, "montantFacturesHT": 25000 },
+        { "date": "12/24", "montantCommandesHT": 560000, "montantFacturesHT": 72000 },
+        { "date": "03/25", "montantCommandesHT": 565000, "montantFacturesHT": 130000 },
+        { "date": "06/25", "montantCommandesHT": 565000, "montantFacturesHT": 195000 },
+        { "date": "09/25", "montantCommandesHT": 570000, "montantFacturesHT": 255000 },
+        { "date": "12/25", "montantCommandesHT": 570000, "montantFacturesHT": 310000 },
+        { "date": "03/26", "montantCommandesHT": 572000, "montantFacturesHT": 362000 }
+      ],
+      "rapports": [
+        {
+          "date": "20260312",
+          "mois": "Mars 2026",
+          "nombreTotalCommandes": 28,
+          "nombreTotalAvenants": 6,
+          "nombreCommandesActives": 22,
+          "nombreTotalFactures": 41,
+          "montantTotalCommandesHT": 572000.00,
+          "montantTotalFacturesHT": 362000.00,
+          "totalCommandesHonorairesHT": 520000.00,
+          "totalCommandesTravauxHT": 0.00,
+          "totalCommandesDiversHT": 52000.00,
+          "totalTVACommandes": 114400.00,
+          "totalTVAFactures": 72400.00,
+          "nombreFacturesAvecRetenue": 0,
+          "montantTotalRetenueGarantieHT": 0.00,
+          "montantTotalCommandesTTC": 686400.00,
+          "montantTotalFacturesTTC": 434400.00,
+          "pourcentageAvancementMois": 1,
+          "pourcentageAvancementTotal": 63,
+          "facturesMois": [
+            {
+              "factureOuSituation": "NH/2026/031",
+              "societe": "ROM",
+              "dateValidation": "12/03/2026",
+              "montantHT": 14000,
+              "tva": 2800,
+              "montantTTC": 16800,
+              "pourcentageFactureSurCommande": 9,
+              "pourcentageAvancementTotal": 63
+            }
+          ],
+          "commandes": [
+            { "societe": "ROM", "montantHT": 130000, "lot": "AMO", "type": "honoraires", "valeurHtRestante": 38000, "pourcentageAvancement": 71 },
+            { "societe": "ARCOS", "montantHT": 195000, "lot": "MOEx et OPC", "type": "honoraires", "valeurHtRestante": 95000, "pourcentageAvancement": 51 },
+            { "societe": "MARTIN HERBET", "montantHT": 110000, "lot": "ARCHITECTE", "type": "honoraires", "valeurHtRestante": 38000, "pourcentageAvancement": 65 },
+            { "societe": "OPTIMUM", "montantHT": 28000, "lot": "BE Structure", "type": "honoraires", "valeurHtRestante": 8000, "pourcentageAvancement": 71 },
+            { "societe": "ITMR", "montantHT": 24000, "lot": "BE Fluides", "type": "honoraires", "valeurHtRestante": 9000, "pourcentageAvancement": 63 },
+            { "societe": "BATISS", "montantHT": 18000, "lot": "BE Incendie", "type": "honoraires", "valeurHtRestante": 5000, "pourcentageAvancement": 72 },
+            { "societe": "SOL CONSEIL", "montantHT": 15000, "lot": "BE Géotechnique", "type": "honoraires", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "BTP", "montantHT": 25000, "lot": "Diagnostic", "type": "divers", "valeurHtRestante": 0, "pourcentageAvancement": 100 },
+            { "societe": "LANQUETIN", "montantHT": 9000, "lot": "Géomètre", "type": "divers", "valeurHtRestante": 1500, "pourcentageAvancement": 83 },
+            { "societe": "OASIIS", "montantHT": 18000, "lot": "Frais certification", "type": "divers", "valeurHtRestante": 9000, "pourcentageAvancement": 50 }
+          ],
+          "factures": [
+            { "dateFacture": "15/10/2024", "factureOuSituation": "NH/2024/121", "societe": "ROM", "dateValidationAMO": "15/10/2024", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "15/12/2024", "factureOuSituation": "NH/2024/165", "societe": "ROM", "dateValidationAMO": "15/12/2024", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "10/03/2025", "factureOuSituation": "NH/2025/028", "societe": "ROM", "dateValidationAMO": "10/03/2025", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "10/06/2025", "factureOuSituation": "NH/2025/072", "societe": "ROM", "dateValidationAMO": "10/06/2025", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "10/09/2025", "factureOuSituation": "NH/2025/108", "societe": "ROM", "dateValidationAMO": "10/09/2025", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "10/12/2025", "factureOuSituation": "NH/2025/152", "societe": "ROM", "dateValidationAMO": "10/12/2025", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 },
+            { "dateFacture": "12/03/2026", "factureOuSituation": "NH/2026/031", "societe": "ROM", "dateValidationAMO": "12/03/2026", "montantHT": 14000, "montantTTC": 16800, "retenueGarantie": 0, "pourcentageFactureSurCommande": 11, "pourcentageAvancementTotal": 63 }
+          ]
+        }
+      ]
+    }
+  ]
+}
