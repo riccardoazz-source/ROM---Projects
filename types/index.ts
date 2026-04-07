@@ -63,9 +63,11 @@ export interface RapportMensuel {
 
 export interface Projet {
   id: string;
+  shareToken: string;
   nom: string;
   client: string;
   description?: string;
+  statut?: 'en_cours' | 'termine' | 'en_attente';
   rapports: RapportMensuel[];
   historiqueChart: HistoriquePoint[];
 }

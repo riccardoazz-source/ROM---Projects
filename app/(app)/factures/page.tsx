@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, ExternalLink, Download } from 'lucide-react';
 import Link from 'next/link';
 
 interface FactureResult {
@@ -61,14 +61,37 @@ export default function FacturesPage() {
   const totalHT = filtered.reduce((s, f) => s + f.montantHT, 0);
   const totalTTC = filtered.reduce((s, f) => s + f.montantTTC, 0);
 
+  const exportCSV = () => {
+    const headers = ['Date facture', 'N° Facture', 'Société', 'Projet', 'Client', 'Date validation AMO', 'Montant HT', 'Montant TTC', 'Retenue', '% Commande', '% Avancement'];
+    const rows = filtered.map(f => [
+      f.dateFacture, f.factureOuSituation, f.societe, f.projetNom, f.client,
+      f.dateValidationAMO, f.montantHT.toFixed(2), f.montantTTC.toFixed(2),
+      f.retenueGarantie.toFixed(2), `${f.pourcentageFactureSurCommande}%`, `${f.pourcentageAvancementTotal}%`
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'factures.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Recherche de factures</h1>
-        <p className="text-gray-500 mt-1 text-sm">
-          Consultez et recherchez toutes les factures validées de tous les projets
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Recherche de factures</h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            Consultez et recherchez toutes les factures validées de tous les projets
+          </p>
+        </div>
+        <button
+          onClick={exportCSV}
+          disabled={filtered.length === 0}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
       </div>
 
       {/* Search & Filters */}

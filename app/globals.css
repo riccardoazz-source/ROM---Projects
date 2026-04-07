@@ -2,64 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --rom-primary: #1B3A5C;
-  --rom-secondary: #2B6CB0;
-  --rom-accent: #3182CE;
-  --rom-bg: #F7FAFC;
+  --rom-dark:    #1C3D54;
+  --rom-primary: #1C4F6C;
+  --rom-teal:    #2589A8;
+  --rom-light:   #3DAACB;
+  --bg:          #F0F4F7;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
-  background-color: var(--rom-bg);
   font-family: 'Inter', system-ui, sans-serif;
   color: #1A202C;
+  background-color: var(--bg);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #EDF2F7;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E0;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #A0AEC0;
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #EDF2F7; }
+::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A0AEC0; }
 
-/* Table styles */
-.rom-table {
-  @apply w-full text-sm border-collapse;
-}
+/* Tables */
+.rom-table { @apply w-full text-sm border-collapse; }
 .rom-table th {
-  @apply bg-rom-600 text-white font-semibold text-left px-4 py-3 text-xs uppercase tracking-wider;
+  background: var(--rom-dark);
+  @apply text-white font-semibold text-left px-4 py-3 text-xs uppercase tracking-wider;
 }
-.rom-table td {
-  @apply px-4 py-3 border-b border-gray-100;
-}
-.rom-table tr:last-child td {
-  @apply border-b-0;
-}
-.rom-table tbody tr:hover {
-  @apply bg-blue-50;
-}
+.rom-table td { @apply px-4 py-3 border-b border-slate-100 text-sm; }
+.rom-table tr:last-child td { @apply border-b-0; }
+.rom-table tbody tr:hover { background: rgba(37, 137, 168, 0.04); }
+.rom-table tfoot td { background: var(--rom-dark); @apply text-white font-bold; }
 
-/* Card styles */
+/* Cards */
 .rom-card {
-  @apply bg-white rounded-xl shadow-sm border border-gray-100;
+  @apply bg-white rounded-2xl shadow-sm border border-slate-100;
 }
 
-/* Badge styles */
-.badge-avancement {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+/* Section headers */
+.section-header {
+  background: linear-gradient(135deg, var(--rom-dark) 0%, var(--rom-primary) 100%);
+  @apply text-white font-bold text-xs uppercase tracking-widest px-5 py-3.5;
+}
+
+/* Badges */
+.badge-validated {
+  @apply inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full;
+}
+.badge-pending {
+  @apply inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full;
 }

@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { getProjetById, getDernierRapport, formatMontantHT } from '@/lib/data';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
+import CopyShareButton from '@/components/CopyShareButton';
 import EvolutionChart from '@/components/charts/EvolutionChart';
 import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
-import { ChevronRight, Euro, Hash, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { ChevronRight, Euro, Hash, FileText, TrendingUp, CheckCircle, ExternalLink } from 'lucide-react';
 import { Commande } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -102,9 +103,17 @@ export default function ProjetPage({ params }: PageProps) {
           <h1 className="text-2xl font-bold text-gray-900">{projet.nom}</h1>
           <p className="text-gray-500 mt-1 text-sm">{projet.client} · {projet.description}</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
-          <p className="text-sm font-bold text-rom-600">{rapport.mois}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
+            <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
+          </div>
+          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
+          <a href={`/partage/${projet.shareToken}`} target="_blank" rel="noopener noreferrer"
+            title="Ouvrir la vue partagée"
+            className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-rom-600 hover:border-rom-300 transition-colors">
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
 

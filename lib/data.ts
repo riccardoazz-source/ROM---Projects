@@ -2,6 +2,25 @@ import { Projet, RapportMensuel, Facture } from '@/types';
 import fs from 'fs';
 import path from 'path';
 
+const CONFIG_PATH = path.join(process.cwd(), 'data', 'config.json');
+
+export interface AppConfig {
+  googleDriveFolderId: string;
+  googleDriveFolderUrl: string;
+  googleApiKey: string;
+  appName: string;
+  lastSync: string | null;
+}
+
+export function getConfig(): AppConfig {
+  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+  return JSON.parse(raw) as AppConfig;
+}
+
+export function saveConfig(config: AppConfig): void {
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+}
+
 const DATA_PATH = path.join(process.cwd(), 'data', 'projets.json');
 
 export function getAllProjets(): Projet[] {
@@ -13,6 +32,11 @@ export function getAllProjets(): Projet[] {
 export function getProjetById(id: string): Projet | null {
   const projets = getAllProjets();
   return projets.find((p) => p.id === id) ?? null;
+}
+
+export function getProjetByToken(token: string): Projet | null {
+  const projets = getAllProjets();
+  return projets.find((p) => p.shareToken === token) ?? null;
 }
 
 export function getDernierRapport(projet: Projet): RapportMensuel | null {

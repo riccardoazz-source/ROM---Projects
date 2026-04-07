@@ -2,6 +2,7 @@
   "projets": [
     {
       "id": "11-havre-sight-capital",
+      "shareToken": "sh_havre2026xK9mP",
       "nom": "11 HAVRE",
       "client": "SIGHT CAPITAL",
       "description": "Mission AMO - Projet de réhabilitation 11 rue du Havre",
@@ -130,6 +131,7 @@
     },
     {
       "id": "30frank-namsong",
+      "shareToken": "sh_frank2025rL4nQ",
       "nom": "30FRANK",
       "client": "NAMSONG",
       "description": "Mission AMO - Réhabilitation immeuble 30 rue Frank",
@@ -196,6 +198,7 @@
     },
     {
       "id": "35abond-left-bank",
+      "shareToken": "sh_abond2026tM7wR",
       "nom": "35ABOND",
       "client": "LEFT BANK",
       "description": "Mission AMO - Réhabilitation 35 avenue Abond",
@@ -260,6 +263,7 @@
     },
     {
       "id": "plai-sight-capital",
+      "shareToken": "sh_plai2026uN2vS",
       "nom": "PLAI",
       "client": "SIGHT CAPITAL",
       "description": "Mission AMO - Construction PLAI logements sociaux",

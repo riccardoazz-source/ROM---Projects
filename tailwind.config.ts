@@ -10,20 +10,23 @@ const config: Config = {
     extend: {
       colors: {
         rom: {
-          50: '#EEF4FB',
-          100: '#D5E4F4',
-          200: '#ABCAE9',
-          300: '#82AFDE',
-          400: '#5895D3',
-          500: '#2B6CB0',
-          600: '#1B3A5C',
-          700: '#142D47',
-          800: '#0E1F31',
-          900: '#07121C',
+          50:  '#EDF4F8',
+          100: '#D0E4ED',
+          200: '#A1C9DB',
+          300: '#72AEC9',
+          400: '#3D8DB2',
+          500: '#2589A8',   // brand teal (building lighter)
+          600: '#1C6A87',
+          700: '#1C4F6C',   // brand teal dark (building darker)
+          800: '#1C3D54',   // brand navy (ROM text)
+          900: '#122737',
         },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        'rom': '0 4px 24px rgba(28, 61, 84, 0.10)',
       },
     },
   },
