@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -12,6 +11,52 @@ import {
   Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
+
+function RomLogo() {
+  return (
+    <div className="flex items-center gap-2.5">
+      {/* Building icon — inline SVG */}
+      <svg width="26" height="34" viewBox="0 0 26 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Front face */}
+        <rect x="0" y="8" width="18" height="26" fill="#7EC8DD" />
+        {/* Right face */}
+        <polygon points="18,8 26,2 26,28 18,34" fill="#2589A8" />
+        {/* Top face */}
+        <polygon points="0,8 8,2 26,2 18,8" fill="#4FA8C5" />
+        {/* Floor lines on front */}
+        <line x1="0" y1="15" x2="18" y2="15" stroke="#1C3D54" strokeWidth="0.8" opacity="0.4" />
+        <line x1="0" y1="22" x2="18" y2="22" stroke="#1C3D54" strokeWidth="0.8" opacity="0.4" />
+        <line x1="0" y1="29" x2="18" y2="29" stroke="#1C3D54" strokeWidth="0.8" opacity="0.4" />
+        {/* Windows on front */}
+        <rect x="3" y="11" width="4" height="3" fill="#1C3D54" opacity="0.35" />
+        <rect x="11" y="11" width="4" height="3" fill="#1C3D54" opacity="0.35" />
+        <rect x="3" y="18" width="4" height="3" fill="#1C3D54" opacity="0.35" />
+        <rect x="11" y="18" width="4" height="3" fill="#1C3D54" opacity="0.35" />
+      </svg>
+      {/* ROM text */}
+      <div className="flex flex-col leading-none">
+        <span style={{
+          fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
+          fontWeight: 900,
+          fontSize: '18px',
+          color: 'white',
+          letterSpacing: '4px',
+          lineHeight: 1,
+        }}>ROM</span>
+        <span style={{
+          fontFamily: 'Arial, sans-serif',
+          fontWeight: 400,
+          fontSize: '7.5px',
+          color: 'rgba(255,255,255,0.45)',
+          letterSpacing: '1.5px',
+          lineHeight: 1,
+          marginTop: '3px',
+          textTransform: 'uppercase',
+        }}>Roux Oeuvre Maîtrise</span>
+      </div>
+    </div>
+  );
+}
 
 const navGroups = [
   {
@@ -49,15 +94,8 @@ export default function Navigation() {
       }}
     >
       {/* Logo */}
-      <Link href="/" className="flex items-center px-5 py-5 border-b border-white/10 gap-3 group">
-        <Image
-          src="/logo-white.svg"
-          alt="ROM"
-          width={100}
-          height={32}
-          className="h-8 w-auto"
-          priority
-        />
+      <Link href="/" className="flex items-center px-5 py-5 border-b border-white/10">
+        <RomLogo />
       </Link>
 
       {/* Navigation */}

@@ -66,7 +66,16 @@ export default function UploadPage() {
       return { file: f, relativePath: rel, detectedProjet: folder, assignedProjetId: guessId(folder, ps), date, mois, status: 'pending' };
     });
     detected.sort((a,b) => a.date.localeCompare(b.date));
-    setFiles(prev => [...prev, ...detected]);
+    // Keep only the latest report per project (highest YYYYMMDD date)
+    const latestByProject = new Map<string, DetectedFile>();
+    for (const df of detected) {
+      const existing = latestByProject.get(df.assignedProjetId);
+      if (!existing || df.date > existing.date) {
+        latestByProject.set(df.assignedProjetId, df);
+      }
+    }
+    const onlyLatest = Array.from(latestByProject.values());
+    setFiles(prev => [...prev, ...onlyLatest]);
   }, [getProjets]);
 
   function readDir(dir: FileSystemDirectoryEntry, out: File[], done: () => void) {
