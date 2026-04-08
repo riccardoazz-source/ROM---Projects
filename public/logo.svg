@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" fill="none">
+  <!-- ROM text -->
+  <text x="4" y="58" font-family="Arial Black, Arial, sans-serif" font-weight="900"
+    font-size="52" letter-spacing="6" fill="#1C3D54">ROM</text>
+
+  <!-- Vertical separator bar -->
+  <rect x="154" y="8" width="3" height="64" fill="#2589A8" rx="1.5"/>
+
+  <!-- Building icon: stacked 3D floors -->
+  <!-- Floor 9 (top) -->
+  <polygon points="165,10 196,10 200,14 169,14" fill="#1C4F6C"/>
+  <rect x="165" y="14" width="35" height="6" fill="#2589A8" rx="0"/>
+  <!-- Floor 8 -->
+  <polygon points="163,22 198,22 202,26 167,26" fill="#1C4F6C"/>
+  <rect x="163" y="26" width="39" height="6" fill="#2589A8"/>
+  <!-- Floor 7 -->
+  <polygon points="161,34 200,34 204,38 165,38" fill="#1C4F6C"/>
+  <rect x="161" y="38" width="43" height="6" fill="#2589A8"/>
+  <!-- Floor 6 -->
+  <polygon points="159,46 202,46 206,50 163,50" fill="#1C4F6C"/>
+  <rect x="159" y="50" width="47" height="6" fill="#2589A8"/>
+  <!-- Floor 5 (base) -->
+  <polygon points="157,58 204,58 208,62 161,62" fill="#1C4F6C"/>
+  <rect x="157" y="62" width="51" height="6" fill="#2589A8"/>
+
+  <!-- Right side dark face of building -->
+  <polygon points="196,14 200,10 208,62 204,66" fill="#15364A" opacity="0.85"/>
+</svg>
