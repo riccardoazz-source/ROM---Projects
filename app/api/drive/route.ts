@@ -3,82 +3,74 @@ import { getConfig, saveConfig } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
+const BASE = 'https://www.googleapis.com/drive/v3/files';
+const COMMON = 'supportsAllDrives=true&includeItemsFromAllDrives=true';
+
+async function driveGet(q: string, fields: string, apiKey: string) {
+  const url = `${BASE}?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}&key=${apiKey}&pageSize=200&${COMMON}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { error: { message: text.slice(0, 300) } }; }
+  if (!res.ok) throw new Error(`Drive API ${res.status}: ${json.error?.message || 'unknown'}`);
+  return (json.files || []) as Array<{ id: string; name: string; mimeType: string; modifiedTime: string; parents?: string[] }>;
+}
+
 export async function GET() {
   try {
     const config = getConfig();
-    const folderId = config.googleDriveFolderId;
+    const rootId = config.googleDriveFolderId;
     const apiKey = config.googleApiKey || process.env.GOOGLE_DRIVE_API_KEY || '';
 
-    if (!folderId) {
-      return NextResponse.json({
-        success: false,
-        message: "Aucun dossier Google Drive configuré. Ajoutez l'URL dans les Paramètres.",
-      });
-    }
+    if (!rootId) return NextResponse.json({ success: false, message: "Aucun dossier Google Drive configuré." });
+    if (!apiKey)  return NextResponse.json({ success: false, message: "Clé API Google Drive non configurée." });
 
-    if (!apiKey) {
-      // Return folder link without API call
-      return NextResponse.json({
-        success: false,
-        message: "Clé API Google Drive non configurée. Ajoutez-la dans les Paramètres pour lister automatiquement les fichiers.",
-        folderUrl: config.googleDriveFolderUrl,
-        folderId,
-      });
-    }
-
-    // Call Google Drive API v3 (supportsAllDrives for Shared Drives)
-    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-    const fields = encodeURIComponent('files(id,name,mimeType,modifiedTime,size,parents)');
-    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&key=${apiKey}&pageSize=100&orderBy=name&supportsAllDrives=true&includeItemsFromAllDrives=true`;
-
-    const res = await fetch(url);
-
-    // Capture raw text first for better error reporting
-    const text = await res.text();
-    let data: any;
-    try { data = JSON.parse(text); } catch { data = { error: { message: text.slice(0, 200) } }; }
-
-    if (!res.ok) {
-      return NextResponse.json({
-        success: false,
-        message: `Erreur Google Drive API (${res.status}): ${data.error?.message || 'Erreur inconnue'}`,
-      });
-    }
-
-    const files = (data.files || []) as Array<{
-      id: string;
-      name: string;
-      mimeType: string;
-      modifiedTime: string;
-      size?: string;
-      parents?: string[];
-    }>;
-
-    // Group by folder (project)
-    const pdfFiles = files.filter(f =>
-      f.mimeType === 'application/pdf' ||
-      f.mimeType === 'application/vnd.google-apps.folder'
+    // Step 1 — list subfolders in root
+    const folders = await driveGet(
+      `'${rootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+      'files(id,name)',
+      apiKey,
     );
 
-    const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-    const pdfs = files.filter(f => f.mimeType === 'application/pdf');
+    if (folders.length === 0) {
+      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé dans le dossier racine." });
+    }
 
-    // Update lastSync (best-effort — read-only FS on Vercel is fine)
-    try { saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
+    // Step 2 — fetch all PDFs in all subfolders in one query (OR across folder IDs)
+    const parentClause = folders.map(f => `'${f.id}' in parents`).join(' or ');
+    const allPdfs = await driveGet(
+      `(${parentClause}) and mimeType='application/pdf' and trashed=false`,
+      'files(id,name,modifiedTime,parents)',
+      apiKey,
+    );
+
+    // Step 3 — keep only the most recent PDF per subfolder
+    const latestByFolder = new Map<string, { folderName: string; fileName: string; modifiedTime: string }>();
+    const folderById = new Map(folders.map(f => [f.id, f.name]));
+
+    for (const pdf of allPdfs) {
+      const parentId = pdf.parents?.[0] ?? '';
+      const folderName = folderById.get(parentId) ?? parentId;
+      const existing = latestByFolder.get(parentId);
+      if (!existing || pdf.modifiedTime > existing.modifiedTime) {
+        latestByFolder.set(parentId, { folderName, fileName: pdf.name, modifiedTime: pdf.modifiedTime });
+      }
+    }
+
+    const latest = Array.from(latestByFolder.values());
+
+    try { saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* read-only FS on Vercel */ }
 
     return NextResponse.json({
       success: true,
-      message: `${pdfs.length} fichier(s) PDF trouvé(s) dans ${folders.length} sous-dossier(s)`,
-      files: pdfs.map(f => f.name),
+      message: `${latest.length} rapport(s) le plus récent par projet (sur ${folders.length} dossiers, ${allPdfs.length} PDF au total)`,
+      files: latest.map(f => `[${f.folderName}] ${f.fileName}`),
       folders: folders.map(f => f.name),
-      rawFiles: pdfFiles,
-      totalFiles: files.length,
+      totalFiles: allPdfs.length,
     });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({
-      success: false,
-      message: `Erreur réseau: ${msg}`,
-    });
+    return NextResponse.json({ success: false, message: `Erreur: ${msg}` });
   }
 }
