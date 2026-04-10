@@ -1,12 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" fill="none">
-  <!-- ROM text - white version for dark backgrounds -->
-  <text x="4" y="58" font-family="Arial Black, Arial, sans-serif" font-weight="900"
-    font-size="52" letter-spacing="6" fill="white">ROM</text>
+  <!-- ROM text as vector paths (font-independent) -->
+  <path d="M735 831Q856 831 908.5 876.0Q961 921 961 1024Q961 1126 908.5 1170.0Q856 1214 735 1214H573V831ZM573 565V0H188V1493H776Q1071 1493 1208.5 1394.0Q1346 1295 1346 1081Q1346 933 1274.5 838.0Q1203 743 1059 698Q1138 680 1200.5 616.5Q1263 553 1327 424L1536 0H1126L944 371Q889 483 832.5 524.0Q776 565 682 565Z" transform="translate(4.00,58) scale(0.024645,-0.033419)" fill="white"/>
+  <path d="M870 1241Q694 1241 597.0 1111.0Q500 981 500 745Q500 510 597.0 380.0Q694 250 870 250Q1047 250 1144.0 380.0Q1241 510 1241 745Q1241 981 1144.0 1111.0Q1047 1241 870 1241ZM870 1520Q1230 1520 1434.0 1314.0Q1638 1108 1638 745Q1638 383 1434.0 177.0Q1230 -29 870 -29Q511 -29 306.5 177.0Q102 383 102 745Q102 1108 306.5 1314.0Q511 1520 870 1520Z" transform="translate(48.87,58) scale(0.024645,-0.033419)" fill="white"/>
+  <path d="M188 1493H678L1018 694L1360 1493H1849V0H1485V1092L1141 287H897L553 1092V0H188Z" transform="translate(97.77,58) scale(0.024645,-0.033419)" fill="white"/>
 
   <!-- Vertical separator bar -->
   <rect x="154" y="8" width="3" height="64" fill="#7EC8DD" rx="1.5"/>
 
-  <!-- Building floors - lighter versions for dark bg -->
+  <!-- Building floors -->
   <polygon points="165,10 196,10 200,14 169,14" fill="#4FA8C5"/>
   <rect x="165" y="14" width="35" height="6" fill="#7EC8DD"/>
   <polygon points="163,22 198,22 202,26 167,26" fill="#4FA8C5"/>
