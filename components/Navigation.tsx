@@ -14,7 +14,21 @@ import clsx from 'clsx';
 import LogoWhite from '@/public/logo-white.svg';
 
 function RomLogo() {
-  return <LogoWhite style={{ height: '40px', width: 'auto' }} />;
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '8px',
+      padding: '5px 10px',
+      display: 'inline-flex',
+      alignItems: 'center',
+    }}>
+      <img
+        src="/logo-ROM-grand-nouveau-acro.png"
+        alt="ROM"
+        style={{ height: '34px', width: 'auto', display: 'block' }}
+      />
+    </div>
+  );
 }
 
 const navGroups = [

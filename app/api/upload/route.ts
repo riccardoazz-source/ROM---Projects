@@ -77,7 +77,14 @@ export async function POST(req: NextRequest) {
     const nom = parts[0]?.trim() || folderName;
     const client = parts.slice(1).join(' - ').trim() || 'Client inconnu';
 
-    const projet = getProjetById(projetId) ?? createOrGetProjet(projetId, nom, client);
+    let projet = getProjetById(projetId);
+    if (!projet) {
+      try {
+        projet = createOrGetProjet(projetId, nom, client);
+      } catch (e) {
+        return NextResponse.json({ success: false, message: `Impossible de créer le projet "${nom}" : système de fichiers en lecture seule. Ajoutez le projet manuellement.` }, { status: 500 });
+      }
+    }
 
     // Read the PDF buffer
     const buffer = Buffer.from(await file.arrayBuffer());
