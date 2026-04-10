@@ -11,50 +11,10 @@ import {
   Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
+import LogoWhite from '@/public/logo-white.svg';
 
 function RomLogo() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      {/* "ROM" — plain HTML text, always crisp on any platform */}
-      <span style={{
-        color: 'white',
-        fontSize: '22px',
-        fontWeight: 900,
-        letterSpacing: '5px',
-        fontFamily: '"Arial Black", "Arial Bold", Gadget, sans-serif',
-        lineHeight: 1,
-      }}>ROM</span>
-
-      {/* Vertical bar + building: exact paths from logo-white.svg,
-          viewBox cropped to just the right-hand graphic portion */}
-      <svg
-        width="36" height="44"
-        viewBox="152 6 60 66"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* separator bar */}
-        <rect x="154" y="8"  width="3"  height="64" fill="#7EC8DD" rx="1.5"/>
-        {/* floor 5 — top */}
-        <polygon points="165,10 196,10 200,14 169,14" fill="#4FA8C5"/>
-        <rect    x="165" y="14" width="35" height="6"  fill="#7EC8DD"/>
-        {/* floor 4 */}
-        <polygon points="163,22 198,22 202,26 167,26" fill="#4FA8C5"/>
-        <rect    x="163" y="26" width="39" height="6"  fill="#7EC8DD"/>
-        {/* floor 3 */}
-        <polygon points="161,34 200,34 204,38 165,38" fill="#4FA8C5"/>
-        <rect    x="161" y="38" width="43" height="6"  fill="#7EC8DD"/>
-        {/* floor 2 */}
-        <polygon points="159,46 202,46 206,50 163,50" fill="#4FA8C5"/>
-        <rect    x="159" y="50" width="47" height="6"  fill="#7EC8DD"/>
-        {/* floor 1 — base */}
-        <polygon points="157,58 204,58 208,62 161,62" fill="#4FA8C5"/>
-        <rect    x="157" y="62" width="51" height="6"  fill="#7EC8DD"/>
-        {/* right side shadow */}
-        <polygon points="196,14 200,10 208,62 204,66" fill="rgba(0,0,0,0.25)"/>
-      </svg>
-    </div>
-  );
+  return <LogoWhite style={{ height: '40px', width: 'auto' }} />;
 }
 
 const navGroups = [
