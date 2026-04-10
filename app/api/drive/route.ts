@@ -26,18 +26,22 @@ export async function GET() {
       });
     }
 
-    // Call Google Drive API v3
+    // Call Google Drive API v3 (supportsAllDrives for Shared Drives)
     const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
     const fields = encodeURIComponent('files(id,name,mimeType,modifiedTime,size,parents)');
-    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&key=${apiKey}&pageSize=100&orderBy=name`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&key=${apiKey}&pageSize=100&orderBy=name&supportsAllDrives=true&includeItemsFromAllDrives=true`;
 
     const res = await fetch(url);
-    const data = await res.json();
+
+    // Capture raw text first for better error reporting
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { data = { error: { message: text.slice(0, 200) } }; }
 
     if (!res.ok) {
       return NextResponse.json({
         success: false,
-        message: `Erreur Google Drive API: ${data.error?.message || 'Erreur inconnue'}`,
+        message: `Erreur Google Drive API (${res.status}): ${data.error?.message || 'Erreur inconnue'}`,
       });
     }
 
