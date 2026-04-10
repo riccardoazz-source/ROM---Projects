@@ -14,8 +14,8 @@ import clsx from 'clsx';
 
 function RomLogo() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      {/* Text via HTML — browser renders it natively, always crisp */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* "ROM" — plain HTML text, always crisp on any platform */}
       <span style={{
         color: 'white',
         fontSize: '22px',
@@ -25,25 +25,33 @@ function RomLogo() {
         lineHeight: 1,
       }}>ROM</span>
 
-      {/* Vertical separator */}
-      <div style={{ width: '2px', height: '30px', background: '#7EC8DD', borderRadius: '1px', flexShrink: 0 }} />
-
-      {/* Building — 8 floors, designed at native display size */}
-      <svg width="20" height="44" viewBox="0 0 20 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="5,0  16,0  20,2  9,2"   fill="#4FA8C5"/>
-        <rect x="5"  y="2"  width="15" height="3" fill="#7EC8DD"/>
-        <polygon points="4,7  17,7  20,9  7,9"   fill="#4FA8C5"/>
-        <rect x="4"  y="9"  width="16" height="3" fill="#7EC8DD"/>
-        <polygon points="3,14 18,14 20,16 5,16"  fill="#4FA8C5"/>
-        <rect x="3"  y="16" width="17" height="3" fill="#7EC8DD"/>
-        <polygon points="2,21 19,21 20,23 3,23"  fill="#4FA8C5"/>
-        <rect x="2"  y="23" width="18" height="3" fill="#7EC8DD"/>
-        <polygon points="1,28 19,28 20,30 2,30"  fill="#4FA8C5"/>
-        <rect x="1"  y="30" width="19" height="3" fill="#7EC8DD"/>
-        <polygon points="0,35 20,35 20,37 1,37"  fill="#4FA8C5"/>
-        <rect x="0"  y="37" width="20" height="4" fill="#7EC8DD"/>
-        {/* Right shadow face */}
-        <polygon points="16,2 20,0 20,44 16,44" fill="rgba(0,0,0,0.30)"/>
+      {/* Vertical bar + building: exact paths from logo-white.svg,
+          viewBox cropped to just the right-hand graphic portion */}
+      <svg
+        width="36" height="44"
+        viewBox="152 6 60 66"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* separator bar */}
+        <rect x="154" y="8"  width="3"  height="64" fill="#7EC8DD" rx="1.5"/>
+        {/* floor 5 — top */}
+        <polygon points="165,10 196,10 200,14 169,14" fill="#4FA8C5"/>
+        <rect    x="165" y="14" width="35" height="6"  fill="#7EC8DD"/>
+        {/* floor 4 */}
+        <polygon points="163,22 198,22 202,26 167,26" fill="#4FA8C5"/>
+        <rect    x="163" y="26" width="39" height="6"  fill="#7EC8DD"/>
+        {/* floor 3 */}
+        <polygon points="161,34 200,34 204,38 165,38" fill="#4FA8C5"/>
+        <rect    x="161" y="38" width="43" height="6"  fill="#7EC8DD"/>
+        {/* floor 2 */}
+        <polygon points="159,46 202,46 206,50 163,50" fill="#4FA8C5"/>
+        <rect    x="159" y="50" width="47" height="6"  fill="#7EC8DD"/>
+        {/* floor 1 — base */}
+        <polygon points="157,58 204,58 208,62 161,62" fill="#4FA8C5"/>
+        <rect    x="157" y="62" width="51" height="6"  fill="#7EC8DD"/>
+        {/* right side shadow */}
+        <polygon points="196,14 200,10 208,62 204,66" fill="rgba(0,0,0,0.25)"/>
       </svg>
     </div>
   );
