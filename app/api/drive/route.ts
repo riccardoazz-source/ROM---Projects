@@ -75,9 +75,10 @@ export async function GET() {
       totalFiles: files.length,
     });
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({
       success: false,
-      message: 'Erreur lors de la connexion à Google Drive.',
+      message: `Erreur réseau: ${msg}`,
     });
   }
 }
