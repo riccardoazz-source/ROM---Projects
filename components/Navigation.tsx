@@ -11,25 +11,6 @@ import {
   Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
-import LogoWhite from '@/public/logo-white.svg';
-
-function RomLogo() {
-  return (
-    <div style={{
-      background: 'white',
-      borderRadius: '8px',
-      padding: '5px 10px',
-      display: 'inline-flex',
-      alignItems: 'center',
-    }}>
-      <img
-        src="/logo-ROM-grand-nouveau-acro.png"
-        alt="ROM"
-        style={{ height: '34px', width: 'auto', display: 'block' }}
-      />
-    </div>
-  );
-}
 
 const navGroups = [
   {
@@ -59,23 +40,22 @@ export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <aside
-      className="fixed left-0 top-0 h-full w-60 flex flex-col z-50"
-      style={{
-        background: 'linear-gradient(180deg, #0F2535 0%, #1C3D54 40%, #1C4F6C 100%)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-      }}
-    >
-      {/* Logo */}
-      <Link href="/" className="flex items-center px-5 py-5 border-b border-white/10">
-        <RomLogo />
+    <aside className="fixed left-0 top-0 h-full w-60 flex flex-col z-50 bg-white border-r border-slate-200 shadow-sm">
+
+      {/* Logo area — white background, full width, generous padding */}
+      <Link href="/" className="flex items-center justify-center px-5 py-6 border-b border-slate-100">
+        <img
+          src="/logo-ROM-grand-nouveau-acro.png"
+          alt="ROM – Roux Oeuvre Maîtrise"
+          style={{ height: '54px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
+        />
       </Link>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-5 space-y-5 overflow-y-auto">
+      {/* Navigation — light background, blue accents */}
+      <nav className="flex-1 px-3 py-5 space-y-5 overflow-y-auto bg-white">
         {navGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/30">
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -88,13 +68,15 @@ export default function Navigation() {
                     className={clsx(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
                       active
-                        ? 'bg-white/15 text-white shadow-sm border border-white/10'
-                        : 'text-white/60 hover:bg-white/8 hover:text-white/90'
+                        ? 'bg-rom-50 text-rom-700 border border-rom-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                     )}
                   >
-                    <Icon className={clsx('w-4 h-4 flex-shrink-0', active ? 'text-rom-300' : 'text-white/40')} />
+                    <Icon className={clsx('w-4 h-4 flex-shrink-0', active ? 'text-rom-600' : 'text-slate-400')} />
                     {label}
-                    {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-rom-400 flex-shrink-0" />}
+                    {active && (
+                      <span className="ml-auto w-2 h-2 rounded-full bg-rom-500 flex-shrink-0" />
+                    )}
                   </Link>
                 );
               })}
@@ -104,8 +86,8 @@ export default function Navigation() {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/10">
-        <p className="text-[10px] text-white/25">Roux Oeuvre Maitrise — v1.0</p>
+      <div className="px-5 py-4 border-t border-slate-100 bg-white">
+        <p className="text-[10px] text-slate-400">Roux Oeuvre Maîtrise — v1.0</p>
       </div>
     </aside>
   );
