@@ -14,11 +14,26 @@ import clsx from 'clsx';
 
 function RomLogo() {
   return (
-    <img
-      src="/logo-white.svg"
-      alt="ROM – Roux Oeuvre Maîtrise"
-      style={{ height: '36px', width: 'auto' }}
-    />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" fill="none"
+      style={{ height: '38px', width: 'auto' }}>
+      {/* ROM text */}
+      <text x="4" y="58" fontFamily="Arial Black, Arial, sans-serif" fontWeight="900"
+        fontSize="52" letterSpacing="6" fill="white">ROM</text>
+      {/* Vertical separator */}
+      <rect x="154" y="8" width="3" height="64" fill="#7EC8DD" rx="1.5"/>
+      {/* Building — stacked 3D floors */}
+      <polygon points="165,10 196,10 200,14 169,14" fill="#4FA8C5"/>
+      <rect x="165" y="14" width="35" height="6" fill="#7EC8DD"/>
+      <polygon points="163,22 198,22 202,26 167,26" fill="#4FA8C5"/>
+      <rect x="163" y="26" width="39" height="6" fill="#7EC8DD"/>
+      <polygon points="161,34 200,34 204,38 165,38" fill="#4FA8C5"/>
+      <rect x="161" y="38" width="43" height="6" fill="#7EC8DD"/>
+      <polygon points="159,46 202,46 206,50 163,50" fill="#4FA8C5"/>
+      <rect x="159" y="50" width="47" height="6" fill="#7EC8DD"/>
+      <polygon points="157,58 204,58 208,62 161,62" fill="#4FA8C5"/>
+      <rect x="157" y="62" width="51" height="6" fill="#7EC8DD"/>
+      <polygon points="196,14 200,10 208,62 204,66" fill="rgba(0,0,0,0.25)"/>
+    </svg>
   );
 }
 

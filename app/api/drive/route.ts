@@ -63,8 +63,8 @@ export async function GET() {
     const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
     const pdfs = files.filter(f => f.mimeType === 'application/pdf');
 
-    // Update lastSync
-    saveConfig({ ...config, lastSync: new Date().toISOString() });
+    // Update lastSync (best-effort — read-only FS on Vercel is fine)
+    try { saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
 
     return NextResponse.json({
       success: true,
