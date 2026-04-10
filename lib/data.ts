@@ -69,6 +69,25 @@ export function saveProjets(projets: Projet[]): void {
   fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+export function createOrGetProjet(id: string, nom: string, client: string): Projet {
+  const projets = getAllProjets();
+  const existing = projets.find((p) => p.id === id);
+  if (existing) return existing;
+
+  const newProjet: Projet = {
+    id,
+    shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+    nom,
+    client,
+    statut: 'en_cours',
+    rapports: [],
+    historiqueChart: [],
+  };
+  projets.push(newProjet);
+  saveProjets(projets);
+  return newProjet;
+}
+
 export function addOrUpdateRapport(projetId: string, rapport: RapportMensuel): void {
   const projets = getAllProjets();
   const projet = projets.find((p) => p.id === projetId);

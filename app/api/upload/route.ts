@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjetById, addOrUpdateRapport } from '@/lib/data';
+import { getProjetById, createOrGetProjet, addOrUpdateRapport } from '@/lib/data';
 import { RapportMensuel } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -71,10 +71,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Fichier et projet requis.' }, { status: 400 });
     }
 
-    const projet = getProjetById(projetId);
-    if (!projet) {
-      return NextResponse.json({ success: false, message: 'Projet introuvable.' }, { status: 404 });
-    }
+    // Use existing project or create from folder name
+    const folderName = (formData.get('folderName') as string | null) ?? projetId;
+    const parts = folderName.split(/\s*-\s*/);
+    const nom = parts[0]?.trim() || folderName;
+    const client = parts.slice(1).join(' - ').trim() || 'Client inconnu';
+
+    const projet = getProjetById(projetId) ?? createOrGetProjet(projetId, nom, client);
 
     // Read the PDF buffer
     const buffer = Buffer.from(await file.arrayBuffer());

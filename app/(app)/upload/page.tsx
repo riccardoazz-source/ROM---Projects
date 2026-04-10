@@ -31,13 +31,14 @@ function extractDate(filename: string) {
   return { date, mois: mo>=1&&mo<=12 ? `${mths[mo-1]} ${yr}` : `Rapport ${date}` };
 }
 
-function guessId(folder: string, ps: KnownProjet[]) {
+function guessId(folder: string, ps: KnownProjet[]): string {
   const l = folder.toLowerCase();
   for (const p of ps) { if (l.includes(p.nom.toLowerCase())) return p.id; }
   for (const p of ps) { if (l.includes(p.client.toLowerCase())) return p.id; }
   const w = folder.split(/[\s\-_]/)[0];
   for (const p of ps) { if (p.nom.startsWith(w)) return p.id; }
-  return ps[0]?.id ?? '';
+  // No match → use folder name as ID (will auto-create on import)
+  return folder.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 export default function UploadPage() {
@@ -110,7 +111,7 @@ export default function UploadPage() {
     for (const df of pending) {
       setFiles(p => p.map(f => f===df ? {...f, status:'uploading'} : f));
       try {
-        const form = new FormData(); form.append('file', df.file); form.append('projetId', df.assignedProjetId);
+        const form = new FormData(); form.append('file', df.file); form.append('projetId', df.assignedProjetId); form.append('folderName', df.detectedProjet);
         const data = await fetch('/api/upload', { method:'POST', body:form }).then(r => r.json());
         setFiles(p => p.map(f => f===df ? {...f, status: data.success?'done':'error', message: data.message} : f));
       } catch {
