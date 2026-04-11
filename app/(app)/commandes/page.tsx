@@ -18,7 +18,7 @@ interface CommandeResult {
 }
 
 function fmt(v: number) {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
+  return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
 }
 
 const TYPE_LABELS: Record<string, string> = {

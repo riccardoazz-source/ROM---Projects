@@ -20,10 +20,7 @@ interface FactureResult {
 }
 
 function formatMontant(value: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value) + ' €';
+  return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + ' €';
 }
 
 export default function FacturesPage() {

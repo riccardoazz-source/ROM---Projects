@@ -1,7 +1,7 @@
 import { getAllProjets, getDernierRapport, formatMontantHT } from '@/lib/data';
+import DashboardTable, { DashboardRow } from '@/components/DashboardTable';
 import ProjectCard from '@/components/ProjectCard';
 import StatCard from '@/components/StatCard';
-import ProgressBar from '@/components/ProgressBar';
 import { Euro, TrendingUp, FolderKanban, Receipt } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,8 @@ export default async function DashboardPage() {
   let totalCommandesHT = 0, totalFacturesHT = 0;
   let totalCommandesTTC = 0, totalFacturesTTC = 0;
   let totalFactures = 0, totalCommandes = 0, sumAvance = 0, n = 0;
+
+  const rows: DashboardRow[] = [];
 
   for (const p of projets) {
     const r = getDernierRapport(p);
@@ -24,6 +26,17 @@ export default async function DashboardPage() {
     totalFactures     += r.nombreTotalFactures;
     totalCommandes    += r.nombreTotalCommandes;
     sumAvance         += r.pourcentageAvancementTotal;
+    rows.push({
+      id: p.id,
+      nom: p.nom,
+      client: p.client,
+      mois: r.mois,
+      commandesHT: r.montantTotalCommandesHT,
+      facturesHT: r.montantTotalFacturesHT,
+      commandes: r.nombreTotalCommandes,
+      factures: r.nombreTotalFactures,
+      avancement: r.pourcentageAvancementTotal,
+    });
   }
 
   const avgAvance  = n > 0 ? Math.round(sumAvance / n) : 0;
@@ -43,51 +56,7 @@ export default async function DashboardPage() {
         <StatCard label="Projets suivis"      value={`${projets.length}`}                sub={`${totalCommandes} commandes · ${totalFactures} factures`} icon={FolderKanban} accent="bg-violet-600"  />
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="section-header">Récapitulatif financier — tous projets</div>
-        <div className="overflow-x-auto">
-          <table className="rom-table">
-            <thead>
-              <tr>
-                <th>Projet</th><th>Client</th><th>Dernier rapport</th>
-                <th className="text-right">Commandes HT</th>
-                <th className="text-right">Factures HT</th>
-                <th className="text-right">Cmd.</th>
-                <th className="text-right">Fact.</th>
-                <th style={{ width: 150 }}>Avancement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projets.map((p) => {
-                const r = getDernierRapport(p);
-                if (!r) return null;
-                return (
-                  <tr key={p.id}>
-                    <td><a href={`/projet/${p.id}`} className="font-bold text-rom-700 hover:underline">{p.nom}</a></td>
-                    <td className="text-slate-500 font-medium">{p.client}</td>
-                    <td className="text-slate-400">{r.mois}</td>
-                    <td className="text-right font-semibold tabular-nums">{formatMontantHT(r.montantTotalCommandesHT)}</td>
-                    <td className="text-right font-semibold tabular-nums">{formatMontantHT(r.montantTotalFacturesHT)}</td>
-                    <td className="text-right text-slate-500">{r.nombreTotalCommandes}</td>
-                    <td className="text-right text-slate-500">{r.nombreTotalFactures}</td>
-                    <td><ProgressBar value={r.pourcentageAvancementTotal} size="sm" showLabel /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3}>TOTAL CONSOLIDÉ</td>
-                <td className="text-right tabular-nums">{formatMontantHT(totalCommandesHT)}</td>
-                <td className="text-right tabular-nums">{formatMontantHT(totalFacturesHT)}</td>
-                <td className="text-right">{totalCommandes}</td>
-                <td className="text-right">{totalFactures}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+      <DashboardTable rows={rows} />
 
       <div>
         <p className="section-title">Projets</p>
