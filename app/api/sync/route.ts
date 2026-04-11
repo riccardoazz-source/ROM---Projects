@@ -78,19 +78,20 @@ export async function GET() {
       const { nom, client, id } = parseFolder(folder.name);
 
       try {
-        // Check if exists
+        // Check if exists WITH valid data
         const { data: rows } = await supabase
           .from('projets')
-          .select('id')
+          .select('data')
           .eq('id', id);
 
-        if (rows && rows.length > 0) {
+        const hasValidData = rows && rows.length > 0 && rows[0].data?.nom;
+        if (hasValidData) {
           existing++;
           log.push(`[${folder.name}] existant (id: ${id})`);
           continue;
         }
 
-        // Create new project directly via supabase
+        // Create or repair project (row exists but data is null/invalid)
         const newProjet = {
           id,
           shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),

@@ -40,7 +40,9 @@ export async function getAllProjets(): Promise<Projet[]> {
   const { data } = await supabase
     .from('projets')
     .select('data');
-  const projets = (data ?? []).map((r) => r.data as Projet);
+  const projets = (data ?? [])
+    .map((r) => r.data as Projet)
+    .filter((p) => p != null && p.nom != null);
   return projets.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 }
 
