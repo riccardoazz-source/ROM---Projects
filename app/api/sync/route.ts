@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport } from '@/lib/data';
-import { RapportMensuel } from '@/types';
+import { getConfig, saveConfig, createOrGetProjet, getProjetById } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -17,57 +16,17 @@ async function driveGet(q: string, fields: string, apiKey: string) {
   return { ok: true as const, files: (json.files || []) as Array<{ id: string; name: string; mimeType: string; modifiedTime: string }> };
 }
 
-function parseMontant(text: string): number {
-  const cleaned = text.replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
-  return parseFloat(cleaned) || 0;
-}
-
-function extractValue(lines: string[], keyword: string): string {
-  const idx = lines.findIndex((l) => l.toLowerCase().includes(keyword.toLowerCase()));
-  if (idx === -1) return '';
-  const line = lines[idx];
-  const match = line.match(/[\d\s]+[,.][\d]+/);
-  if (match) return match[0];
-  if (idx + 1 < lines.length) {
-    const nextMatch = lines[idx + 1].match(/[\d\s]+[,.][\d]+/);
-    if (nextMatch) return nextMatch[0];
-  }
-  return '';
-}
-
-function extractNumber(lines: string[], keyword: string): number {
-  const idx = lines.findIndex((l) => l.toLowerCase().includes(keyword.toLowerCase()));
-  if (idx === -1) return 0;
-  const line = lines[idx];
-  const match = line.match(/\b(\d+)\b/g);
-  if (match) return parseInt(match[match.length - 1], 10);
-  return 0;
-}
-
-function extractMois(filename: string): string {
-  const dateMatch = filename.match(/(\d{8})/);
-  if (dateMatch) {
-    const d = dateMatch[1];
-    const year = d.substring(0, 4);
-    const month = parseInt(d.substring(4, 6), 10);
-    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    if (month >= 1 && month <= 12) return `${months[month - 1]} ${year}`;
-  }
-  return new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-}
-
-function extractDate(filename: string): string {
-  const m = filename.match(/(\d{8})/);
-  return m ? m[1] : new Date().toISOString().slice(0, 10).replace(/-/g, '');
-}
-
 function parseFolder(folderName: string): { nom: string; client: string; id: string } {
   const parts = folderName.split(/\s*-\s*/);
   const nom = parts[0]?.trim() || folderName;
   const client = parts.slice(1).join(' - ').trim() || 'Client inconnu';
   const id = folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return { nom, client, id };
+}
+
+function extractLatestPdf(files: Array<{ id: string; name: string; modifiedTime: string }>): { id: string; name: string } | null {
+  if (!files.length) return null;
+  return files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
 }
 
 export async function GET() {
@@ -91,97 +50,74 @@ export async function GET() {
 
     const folders = rootResult.files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
     if (folders.length === 0) {
-      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé dans le dossier Drive." });
+      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé." });
     }
 
-    // Step 2 — get latest PDF ID per folder
-    const toProcess: Array<{ folderName: string; fileId: string; fileName: string }> = [];
+    // Step 2 — for each folder: get PDF list + create/update project in parallel
+    const results = await Promise.allSettled(
+      folders.map(async (folder) => {
+        const { nom, client, id: projetId } = parseFolder(folder.name);
 
-    await Promise.all(folders.map(async (folder) => {
-      const res = await driveGet(
-        `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
-        'files(id,name,modifiedTime)',
-        apiKey,
-      );
-      if (!res.ok || res.files.length === 0) return;
-      const latest = res.files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
-      toProcess.push({ folderName: folder.name, fileId: latest.id, fileName: latest.name });
-    }));
+        // Get PDF list for this folder
+        const pdfRes = await driveGet(
+          `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
+          'files(id,name,modifiedTime)',
+          apiKey,
+        );
 
-    if (toProcess.length === 0) {
-      return NextResponse.json({ success: false, message: "Aucun PDF trouvé dans les sous-dossiers." });
-    }
+        const latestPdf = pdfRes.ok ? extractLatestPdf(pdfRes.files) : null;
+        const pdfName = latestPdf?.name ?? null;
 
-    // Step 3 — download, parse and save each PDF sequentially
-    const results: string[] = [];
+        // Check if project already exists
+        const existing = await getProjetById(projetId);
+        let action: string;
 
-    for (const item of toProcess) {
-      try {
-        // Download the PDF
-        const downloadUrl = `${BASE}/${item.fileId}?alt=media&key=${apiKey}`;
-        const pdfRes = await fetch(downloadUrl);
-        if (!pdfRes.ok) {
-          results.push(`[${item.folderName}] Erreur téléchargement (${pdfRes.status})`);
-          continue;
-        }
-        const buffer = Buffer.from(await pdfRes.arrayBuffer());
-
-        // Parse text
-        let extractedText = '';
-        try {
-          const pdfParse = (await import('pdf-parse')).default;
-          const pdfData = await pdfParse(buffer);
-          extractedText = pdfData.text;
-        } catch {
-          // continue with empty text — dates still extracted from filename
+        if (existing) {
+          action = 'existant';
+        } else {
+          await createOrGetProjet(projetId, nom, client);
+          action = 'créé';
         }
 
-        const lines = extractedText.split('\n').map((l) => l.trim()).filter(Boolean);
-        const mois = extractMois(item.fileName);
-        const date = extractDate(item.fileName);
-        const { nom, client, id: projetId } = parseFolder(item.folderName);
-
-        const rapport: RapportMensuel = {
-          date,
-          mois,
-          nombreTotalCommandes:    extractNumber(lines, 'nombre total de commandes'),
-          nombreTotalAvenants:     extractNumber(lines, "nombre total d'avenants"),
-          nombreCommandesActives:  extractNumber(lines, 'nombre de commandes actives'),
-          nombreTotalFactures:     extractNumber(lines, 'nombre total factures'),
-          montantTotalCommandesHT: parseMontant(extractValue(lines, 'montant total commandes (ht)')) || parseMontant(extractValue(lines, 'montant total commandes')),
-          montantTotalFacturesHT:  parseMontant(extractValue(lines, 'montant total factures (ht)'))  || parseMontant(extractValue(lines, 'montant total factures')),
-          totalCommandesHonorairesHT: parseMontant(extractValue(lines, 'total commandes honoraires')),
-          totalCommandesTravauxHT:    parseMontant(extractValue(lines, 'total commandes travaux')),
-          totalCommandesDiversHT:     parseMontant(extractValue(lines, 'total commandes divers')),
-          totalTVACommandes:          parseMontant(extractValue(lines, 'total tva commandes')),
-          totalTVAFactures:           parseMontant(extractValue(lines, 'total tva factures')),
-          nombreFacturesAvecRetenue:  0,
-          montantTotalRetenueGarantieHT: 0,
-          montantTotalCommandesTTC: parseMontant(extractValue(lines, 'montant total commandes (ttc)')),
-          montantTotalFacturesTTC:  parseMontant(extractValue(lines, 'montant total factures (ttc)')),
-          pourcentageAvancementMois:  0,
-          pourcentageAvancementTotal: 0,
-          commandes:    [],
-          factures:     [],
-          facturesMois: [],
+        return {
+          folder: folder.name,
+          projetId,
+          nom,
+          client,
+          action,
+          latestPdf: pdfName,
         };
+      })
+    );
 
-        await createOrGetProjet(projetId, nom, client);
-        await addOrUpdateRapport(projetId, rapport);
-        results.push(`[${item.folderName}] OK — ${mois}`);
-      } catch (e) {
-        results.push(`[${item.folderName}] Erreur: ${e instanceof Error ? e.message : String(e)}`);
+    const summary = results.map((r) => {
+      if (r.status === 'fulfilled') {
+        const v = r.value;
+        return `[${v.folder}] ${v.action === 'créé' ? 'CRÉÉ' : 'OK'} — PDF: ${v.latestPdf ?? 'aucun'}`;
+      } else {
+        return `Erreur: ${r.reason}`;
       }
-    }
+    });
+
+    const created = results.filter(r => r.status === 'fulfilled' && (r as any).value.action === 'créé').length;
+    const existing = results.filter(r => r.status === 'fulfilled' && (r as any).value.action === 'existant').length;
+
+    // Collect files info for the UI
+    const filesInfo = results
+      .filter(r => r.status === 'fulfilled')
+      .map(r => (r as any).value)
+      .filter(v => v.latestPdf)
+      .map(v => `[${v.folder}] ${v.latestPdf}`);
 
     await saveConfig({ ...config, lastSync: new Date().toISOString() });
 
-    const okCount = results.filter(r => r.includes('] OK')).length;
-
     return NextResponse.json({
       success: true,
-      message: `${okCount}/${toProcess.length} projets synchronisés depuis Google Drive`,
-      results,
+      message: `${folders.length} dossiers traités — ${created} projet(s) créé(s), ${existing} existant(s)`,
+      results: summary,
+      files: filesInfo,
+      created,
+      total: folders.length,
     });
 
   } catch (e) {
