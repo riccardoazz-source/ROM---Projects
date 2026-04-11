@@ -39,9 +39,9 @@ export async function saveConfig(config: AppConfig): Promise<void> {
 export async function getAllProjets(): Promise<Projet[]> {
   const { data } = await supabase
     .from('projets')
-    .select('data')
-    .order('data->nom');
-  return (data ?? []).map((r) => r.data as Projet);
+    .select('data');
+  const projets = (data ?? []).map((r) => r.data as Projet);
+  return projets.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 }
 
 export async function getProjetById(id: string): Promise<Projet | null> {
