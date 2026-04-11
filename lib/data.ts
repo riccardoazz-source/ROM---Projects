@@ -39,7 +39,7 @@ export async function saveConfig(config: AppConfig): Promise<void> {
 export async function getAllProjets(): Promise<Projet[]> {
   const { data } = await supabase
     .from('projets')
-    .select('data');
+    .select('id, data');
   const projets = (data ?? [])
     .map((r) => r.data as Projet)
     .filter((p) => p != null && p.nom != null);
@@ -49,7 +49,7 @@ export async function getAllProjets(): Promise<Projet[]> {
 export async function getProjetById(id: string): Promise<Projet | null> {
   const { data } = await supabase
     .from('projets')
-    .select('data')
+    .select('id, data')
     .eq('id', id)
     .single();
   return data ? (data.data as Projet) : null;
@@ -58,7 +58,7 @@ export async function getProjetById(id: string): Promise<Projet | null> {
 export async function getProjetByToken(token: string): Promise<Projet | null> {
   const { data } = await supabase
     .from('projets')
-    .select('data')
+    .select('id, data')
     .eq('data->>shareToken', token)
     .single();
   return data ? (data.data as Projet) : null;
