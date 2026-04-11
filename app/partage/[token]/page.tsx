@@ -25,8 +25,8 @@ function RomLogoShare() {
   );
 }
 
-export default function PartageProjetPage({ params }: PageProps) {
-  const projet = getProjetByToken(params.token);
+export default async function PartageProjetPage({ params }: PageProps) {
+  const projet = await getProjetByToken(params.token);
   if (!projet) notFound();
 
   const rapport = getDernierRapport(projet);

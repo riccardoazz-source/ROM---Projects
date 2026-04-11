@@ -17,7 +17,7 @@ async function driveGet(q: string, fields: string, apiKey: string) {
 
 export async function GET() {
   try {
-    const config = getConfig();
+    const config = await getConfig();
     const rootId = config.googleDriveFolderId;
     const apiKey = config.googleApiKey || process.env.GOOGLE_DRIVE_API_KEY || '';
 
@@ -68,7 +68,7 @@ export async function GET() {
       }
     }));
 
-    try { saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* Vercel read-only FS */ }
+    try { await saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
 
     const errMsg = errors.length > 0 ? ` (${errors.length} dossier(s) inaccessible(s))` : '';
 

@@ -6,8 +6,8 @@ import { Euro, TrendingUp, FolderKanban, Receipt } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default function DashboardPage() {
-  const projets = getAllProjets();
+export default async function DashboardPage() {
+  const projets = await getAllProjets();
 
   let totalCommandesHT = 0, totalFacturesHT = 0;
   let totalCommandesTTC = 0, totalFacturesTTC = 0;

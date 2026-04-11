@@ -73,8 +73,8 @@ function CommandesSection({ commandes, type, label }: { commandes: Commande[]; t
   );
 }
 
-export default function ProjetPage({ params }: PageProps) {
-  const projet = getProjetById(params.id);
+export default async function ProjetPage({ params }: PageProps) {
+  const projet = await getProjetById(params.id);
   if (!projet) notFound();
 
   const rapport = getDernierRapport(projet);

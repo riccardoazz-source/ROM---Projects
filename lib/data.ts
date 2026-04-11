@@ -1,8 +1,5 @@
 import { Projet, RapportMensuel, Facture } from '@/types';
-import fs from 'fs';
-import path from 'path';
-
-const CONFIG_PATH = path.join(process.cwd(), 'data', 'config.json');
+import { supabase } from './db';
 
 export interface AppConfig {
   googleDriveFolderId: string;
@@ -12,68 +9,72 @@ export interface AppConfig {
   lastSync: string | null;
 }
 
-export function getConfig(): AppConfig {
-  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-  return JSON.parse(raw) as AppConfig;
+const DEFAULT_CONFIG: AppConfig = {
+  googleDriveFolderId: '',
+  googleDriveFolderUrl: '',
+  googleApiKey: '',
+  appName: 'ROM - Suivi Projets',
+  lastSync: null,
+};
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+export async function getConfig(): Promise<AppConfig> {
+  const { data } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'app')
+    .single();
+  return (data?.value as AppConfig) ?? DEFAULT_CONFIG;
 }
 
-export function saveConfig(config: AppConfig): void {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+export async function saveConfig(config: AppConfig): Promise<void> {
+  await supabase
+    .from('config')
+    .upsert({ key: 'app', value: config });
 }
 
-const DATA_PATH = path.join(process.cwd(), 'data', 'projets.json');
+// ─── Projets ─────────────────────────────────────────────────────────────────
 
-export function getAllProjets(): Projet[] {
-  const raw = fs.readFileSync(DATA_PATH, 'utf-8');
-  const data = JSON.parse(raw);
-  return data.projets as Projet[];
+export async function getAllProjets(): Promise<Projet[]> {
+  const { data } = await supabase
+    .from('projets')
+    .select('data')
+    .order('data->nom');
+  return (data ?? []).map((r) => r.data as Projet);
 }
 
-export function getProjetById(id: string): Projet | null {
-  const projets = getAllProjets();
-  return projets.find((p) => p.id === id) ?? null;
+export async function getProjetById(id: string): Promise<Projet | null> {
+  const { data } = await supabase
+    .from('projets')
+    .select('data')
+    .eq('id', id)
+    .single();
+  return data ? (data.data as Projet) : null;
 }
 
-export function getProjetByToken(token: string): Projet | null {
-  const projets = getAllProjets();
-  return projets.find((p) => p.shareToken === token) ?? null;
+export async function getProjetByToken(token: string): Promise<Projet | null> {
+  const { data } = await supabase
+    .from('projets')
+    .select('data')
+    .eq('data->>shareToken', token)
+    .single();
+  return data ? (data.data as Projet) : null;
 }
 
-export function getDernierRapport(projet: Projet): RapportMensuel | null {
-  if (!projet.rapports || projet.rapports.length === 0) return null;
-  return projet.rapports.reduce((latest, r) =>
-    r.date > latest.date ? r : latest
-  );
+export async function saveProjet(projet: Projet): Promise<void> {
+  await supabase
+    .from('projets')
+    .upsert({ id: projet.id, data: projet });
 }
 
-export function getAllFactures(): Array<Facture & { projetId: string; projetNom: string; client: string }> {
-  const projets = getAllProjets();
-  const all: Array<Facture & { projetId: string; projetNom: string; client: string }> = [];
-  for (const projet of projets) {
-    const rapport = getDernierRapport(projet);
-    if (!rapport) continue;
-    for (const facture of rapport.factures) {
-      all.push({
-        ...facture,
-        projetId: projet.id,
-        projetNom: projet.nom,
-        client: projet.client,
-      });
-    }
-  }
-  return all;
+export async function saveProjets(projets: Projet[]): Promise<void> {
+  for (const p of projets) await saveProjet(p);
 }
 
-export function saveProjets(projets: Projet[]): void {
-  const data = { projets };
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export function createOrGetProjet(id: string, nom: string, client: string): Projet {
-  const projets = getAllProjets();
-  const existing = projets.find((p) => p.id === id);
+export async function createOrGetProjet(id: string, nom: string, client: string): Promise<Projet> {
+  const existing = await getProjetById(id);
   if (existing) return existing;
-
   const newProjet: Projet = {
     id,
     shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
@@ -83,52 +84,52 @@ export function createOrGetProjet(id: string, nom: string, client: string): Proj
     rapports: [],
     historiqueChart: [],
   };
-  projets.push(newProjet);
-  saveProjets(projets);
+  await saveProjet(newProjet);
   return newProjet;
 }
 
-export function addOrUpdateRapport(projetId: string, rapport: RapportMensuel): void {
-  const projets = getAllProjets();
-  const projet = projets.find((p) => p.id === projetId);
+export function getDernierRapport(projet: Projet): RapportMensuel | null {
+  if (!projet.rapports?.length) return null;
+  return projet.rapports.reduce((latest, r) => r.date > latest.date ? r : latest);
+}
+
+export async function getAllFactures(): Promise<Array<Facture & { projetId: string; projetNom: string; client: string }>> {
+  const projets = await getAllProjets();
+  const all: Array<Facture & { projetId: string; projetNom: string; client: string }> = [];
+  for (const projet of projets) {
+    const rapport = getDernierRapport(projet);
+    if (!rapport) continue;
+    for (const facture of rapport.factures) {
+      all.push({ ...facture, projetId: projet.id, projetNom: projet.nom, client: projet.client });
+    }
+  }
+  return all;
+}
+
+export async function addOrUpdateRapport(projetId: string, rapport: RapportMensuel): Promise<void> {
+  const projet = await getProjetById(projetId);
   if (!projet) throw new Error(`Projet ${projetId} introuvable`);
 
   const idx = projet.rapports.findIndex((r) => r.date === rapport.date);
-  if (idx >= 0) {
-    projet.rapports[idx] = rapport;
-  } else {
+  if (idx >= 0) projet.rapports[idx] = rapport;
+  else {
     projet.rapports.push(rapport);
     projet.rapports.sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  // Update historiqueChart
-  const point = {
-    date: rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2),
-    montantCommandesHT: rapport.montantTotalCommandesHT,
-    montantFacturesHT: rapport.montantTotalFacturesHT,
-  };
-  const hIdx = projet.historiqueChart.findIndex((h) => h.date === point.date);
-  if (hIdx >= 0) {
-    projet.historiqueChart[hIdx] = point;
-  } else {
-    projet.historiqueChart.push(point);
-  }
+  const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
+  const point = { date: label, montantCommandesHT: rapport.montantTotalCommandesHT, montantFacturesHT: rapport.montantTotalFacturesHT };
+  const hIdx = projet.historiqueChart.findIndex((h) => h.date === label);
+  if (hIdx >= 0) projet.historiqueChart[hIdx] = point;
+  else projet.historiqueChart.push(point);
 
-  saveProjets(projets);
+  await saveProjet(projet);
 }
 
 export function formatMontant(value: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
 export function formatMontantHT(value: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value) + ' €';
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + ' €';
 }

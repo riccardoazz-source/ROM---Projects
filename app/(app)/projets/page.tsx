@@ -3,8 +3,8 @@ import ProjectCard from '@/components/ProjectCard';
 
 export const dynamic = 'force-dynamic';
 
-export default function ProjetsPage() {
-  const projets = getAllProjets();
+export default async function ProjetsPage() {
+  const projets = await getAllProjets();
 
   return (
     <div>
