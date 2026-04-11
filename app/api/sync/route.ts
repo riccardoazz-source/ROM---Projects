@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getConfig, saveConfig, createOrGetProjet, getProjetById } from '@/lib/data';
+import { getConfig, saveConfig } from '@/lib/data';
+import { supabase } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -11,7 +12,7 @@ async function driveGet(q: string, fields: string, apiKey: string) {
   const res = await fetch(url);
   const text = await res.text();
   let json: any;
-  try { json = JSON.parse(text); } catch { json = { error: { message: text.slice(0, 300) } }; }
+  try { json = JSON.parse(text); } catch { json = { error: { message: text.slice(0, 200) } }; }
   if (!res.ok) return { ok: false as const, status: res.status, message: json.error?.message || 'unknown' };
   return { ok: true as const, files: (json.files || []) as Array<{ id: string; name: string; mimeType: string; modifiedTime: string }> };
 }
@@ -24,104 +25,115 @@ function parseFolder(folderName: string): { nom: string; client: string; id: str
   return { nom, client, id };
 }
 
-function extractLatestPdf(files: Array<{ id: string; name: string; modifiedTime: string }>): { id: string; name: string } | null {
-  if (!files.length) return null;
-  return files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
-}
-
 export async function GET() {
+  const log: string[] = [];
+
   try {
+    // ── Step 0: test direct Supabase write ────────────────────────────────
+    const { error: pingErr } = await supabase
+      .from('projets')
+      .select('id')
+      .limit(1);
+
+    if (pingErr) {
+      return NextResponse.json({
+        success: false,
+        message: `Supabase inaccessible: ${pingErr.message} (${pingErr.code})`,
+        log,
+      });
+    }
+    log.push('Supabase: connexion OK');
+
+    // ── Step 1: load config ───────────────────────────────────────────────
     const config = await getConfig();
     const rootId = config.googleDriveFolderId;
     const apiKey = config.googleApiKey || process.env.GOOGLE_DRIVE_API_KEY || '';
 
-    if (!rootId) return NextResponse.json({ success: false, message: "Aucun dossier Google Drive configuré." });
-    if (!apiKey) return NextResponse.json({ success: false, message: "Clé API Google Drive non configurée." });
+    log.push(`Config: rootId=${rootId || 'VIDE'}, apiKey=${apiKey ? 'OK' : 'VIDE'}`);
 
-    // Step 1 — list subfolders
+    if (!rootId) return NextResponse.json({ success: false, message: "Aucun dossier Drive configuré.", log });
+    if (!apiKey) return NextResponse.json({ success: false, message: "Clé API Drive manquante.", log });
+
+    // ── Step 2: list subfolders ───────────────────────────────────────────
     const rootResult = await driveGet(
       `'${rootId}' in parents and trashed=false`,
       'files(id,name,mimeType)',
       apiKey,
     );
     if (!rootResult.ok) {
-      return NextResponse.json({ success: false, message: `Erreur Drive (${rootResult.status}): ${rootResult.message}` });
+      return NextResponse.json({ success: false, message: `Drive API error (${rootResult.status}): ${rootResult.message}`, log });
     }
 
     const folders = rootResult.files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+    log.push(`Drive: ${folders.length} dossier(s) trouvé(s)`);
+
     if (folders.length === 0) {
-      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé." });
+      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé.", log });
     }
 
-    // Step 2 — for each folder: get PDF list + create/update project in parallel
-    const results = await Promise.allSettled(
-      folders.map(async (folder) => {
-        const { nom, client, id: projetId } = parseFolder(folder.name);
+    // ── Step 3: for each folder, upsert project directly ─────────────────
+    let created = 0, existing = 0, errors = 0;
 
-        // Get PDF list for this folder
-        const pdfRes = await driveGet(
-          `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
-          'files(id,name,modifiedTime)',
-          apiKey,
-        );
+    for (const folder of folders) {
+      const { nom, client, id } = parseFolder(folder.name);
 
-        const latestPdf = pdfRes.ok ? extractLatestPdf(pdfRes.files) : null;
-        const pdfName = latestPdf?.name ?? null;
+      try {
+        // Check if exists
+        const { data: rows } = await supabase
+          .from('projets')
+          .select('id')
+          .eq('id', id);
 
-        // Check if project already exists
-        const existing = await getProjetById(projetId);
-        let action: string;
-
-        if (existing) {
-          action = 'existant';
-        } else {
-          await createOrGetProjet(projetId, nom, client);
-          action = 'créé';
+        if (rows && rows.length > 0) {
+          existing++;
+          log.push(`[${folder.name}] existant (id: ${id})`);
+          continue;
         }
 
-        return {
-          folder: folder.name,
-          projetId,
+        // Create new project directly via supabase
+        const newProjet = {
+          id,
+          shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
           nom,
           client,
-          action,
-          latestPdf: pdfName,
+          statut: 'en_cours',
+          rapports: [],
+          historiqueChart: [],
         };
-      })
-    );
 
-    const summary = results.map((r) => {
-      if (r.status === 'fulfilled') {
-        const v = r.value;
-        return `[${v.folder}] ${v.action === 'créé' ? 'CRÉÉ' : 'OK'} — PDF: ${v.latestPdf ?? 'aucun'}`;
-      } else {
-        return `Erreur: ${r.reason}`;
+        const { error: insErr } = await supabase
+          .from('projets')
+          .upsert({ id, data: newProjet });
+
+        if (insErr) {
+          errors++;
+          log.push(`[${folder.name}] ERREUR INSERT: ${insErr.message} (${insErr.code})`);
+        } else {
+          created++;
+          log.push(`[${folder.name}] CRÉÉ (id: ${id})`);
+        }
+      } catch (e) {
+        errors++;
+        log.push(`[${folder.name}] EXCEPTION: ${e instanceof Error ? e.message : String(e)}`);
       }
-    });
+    }
 
-    const created = results.filter(r => r.status === 'fulfilled' && (r as any).value.action === 'créé').length;
-    const existing = results.filter(r => r.status === 'fulfilled' && (r as any).value.action === 'existant').length;
-
-    // Collect files info for the UI
-    const filesInfo = results
-      .filter(r => r.status === 'fulfilled')
-      .map(r => (r as any).value)
-      .filter(v => v.latestPdf)
-      .map(v => `[${v.folder}] ${v.latestPdf}`);
-
-    await saveConfig({ ...config, lastSync: new Date().toISOString() });
+    // ── Step 4: update lastSync ───────────────────────────────────────────
+    try {
+      await saveConfig({ ...config, lastSync: new Date().toISOString() });
+    } catch { /* non bloquant */ }
 
     return NextResponse.json({
       success: true,
-      message: `${folders.length} dossiers traités — ${created} projet(s) créé(s), ${existing} existant(s)`,
-      results: summary,
-      files: filesInfo,
+      message: `${folders.length} dossiers — ${created} créé(s), ${existing} existant(s), ${errors} erreur(s)`,
+      results: log,
       created,
-      total: folders.length,
+      existing,
+      errors,
     });
 
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ success: false, message: `Erreur: ${msg}` });
+    log.push(`EXCEPTION GLOBALE: ${e instanceof Error ? e.message : String(e)}`);
+    return NextResponse.json({ success: false, message: String(e), log });
   }
 }

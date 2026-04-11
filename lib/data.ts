@@ -63,9 +63,10 @@ export async function getProjetByToken(token: string): Promise<Projet | null> {
 }
 
 export async function saveProjet(projet: Projet): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from('projets')
     .upsert({ id: projet.id, data: projet });
+  if (error) throw new Error(`Supabase saveProjet: ${error.message} (code: ${error.code})`);
 }
 
 export async function saveProjets(projets: Projet[]): Promise<void> {
