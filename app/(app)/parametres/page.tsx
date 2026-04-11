@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Save, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Key, FolderSync, Info, Copy, Link2 } from 'lucide-react';
-import { getAllProjets } from '@/lib/data';
 
 interface Config {
   googleDriveFolderId: string;
@@ -18,7 +17,7 @@ export default function ParametresPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string; files?: string[] } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string; files?: string[]; results?: string[] } | null>(null);
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(setConfig);
@@ -52,11 +51,11 @@ export default function ParametresPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch('/api/drive');
+      const res = await fetch('/api/sync');
       const data = await res.json();
       setSyncResult(data);
     } catch {
-      setSyncResult({ success: false, message: 'Erreur lors de la connexion à Google Drive' });
+      setSyncResult({ success: false, message: 'Erreur lors de la synchronisation Google Drive' });
     } finally {
       setSyncing(false);
     }
@@ -157,7 +156,7 @@ export default function ParametresPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-rom-700 hover:bg-rom-800 disabled:bg-gray-300 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Connexion...' : 'Lister les fichiers Drive'}
+              {syncing ? 'Synchronisation en cours...' : 'Synchroniser depuis Google Drive'}
             </button>
 
             {syncResult && (
@@ -170,17 +169,14 @@ export default function ParametresPage() {
                     {syncResult.message}
                   </p>
                 </div>
-                {syncResult.files && syncResult.files.length > 0 && (
-                  <ul className="text-xs text-green-700 space-y-1 ml-6">
-                    {syncResult.files.slice(0, 10).map((f, i) => (
-                      <li key={i} className="flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full bg-green-500 inline-block" />
-                        {f}
+                {syncResult.results && syncResult.results.length > 0 && (
+                  <ul className="text-xs space-y-1 ml-6 mt-2">
+                    {syncResult.results.map((r, i) => (
+                      <li key={i} className={`flex items-center gap-1 ${r.includes('] OK') ? 'text-green-700' : 'text-red-600'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full inline-block ${r.includes('] OK') ? 'bg-green-500' : 'bg-red-400'}`} />
+                        {r}
                       </li>
                     ))}
-                    {syncResult.files.length > 10 && (
-                      <li className="text-green-600">... et {syncResult.files.length - 10} autres fichiers</li>
-                    )}
                   </ul>
                 )}
               </div>
