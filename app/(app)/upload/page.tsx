@@ -59,13 +59,32 @@ export default function UploadPage() {
     const ps = await getProjets();
     const pdfs = Array.from(list).filter(f => f.name.toLowerCase().endsWith('.pdf'));
     if (!pdfs.length) return;
+
+    // Extract project name from filename: "YYYYMMDD - ProjectName - Bordereau ..."
+    function fromFilename(name: string): string {
+      const afterDate = name.replace(/^\d{8}\s*-\s*/, '');
+      return afterDate.split(/\s*-\s*(bordereau|rapport|suivi)/i)[0].trim()
+        || afterDate.split(' - ')[0].trim();
+    }
+
     const detected: DetectedFile[] = pdfs.map(f => {
       const rel = (f as any).webkitRelativePath as string || f.name;
       const parts = rel.split('/');
-      const folder = parts.length > 1 ? parts[0] : f.name.replace(/^\d{8}\s*-\s*/,'').split(' - ')[0];
+      const folder = parts.length > 1 ? parts[0] : fromFilename(f.name);
       const { date, mois } = extractDate(f.name);
       return { file: f, relativePath: rel, detectedProjet: folder, assignedProjetId: guessId(folder, ps), date, mois, status: 'pending' };
     });
+
+    // If all files map to the same project ID (flat folder, no per-project subfolders),
+    // switch to filename-based detection so each PDF gets its own project
+    const uniqueIds = new Set(detected.map(d => d.assignedProjetId));
+    if (detected.length > 1 && uniqueIds.size === 1) {
+      for (const df of detected) {
+        const proj = fromFilename(df.file.name);
+        if (proj) { df.detectedProjet = proj; df.assignedProjetId = guessId(proj, ps); }
+      }
+    }
+
     detected.sort((a,b) => a.date.localeCompare(b.date));
     // Keep only the latest report per project (highest YYYYMMDD date)
     const latestByProject = new Map<string, DetectedFile>();

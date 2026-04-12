@@ -12,14 +12,21 @@ export async function GET() {
     return NextResponse.json({ error: error.message });
   }
 
-  return NextResponse.json({
-    total: data?.length ?? 0,
-    rows: (data ?? []).map(r => ({
+  const rows = (data ?? []).map(r => {
+    const rapports: any[] = r.data?.rapports ?? [];
+    const dernierRapport = rapports.length > 0
+      ? rapports.reduce((a: any, b: any) => b.date > a.date ? b : a)
+      : null;
+    return {
       id: r.id,
-      dataIsNull: r.data === null,
       nom: r.data?.nom ?? 'NULL',
       client: r.data?.client ?? 'NULL',
-      rapportsCount: r.data?.rapports?.length ?? 'NULL',
-    })),
+      rapportsCount: rapports.length,
+      dernierMois: dernierRapport?.mois ?? 'aucun',
+      nbCommandes: dernierRapport?.commandes?.length ?? 0,
+      nbFactures: dernierRapport?.factures?.length ?? 0,
+      nbFacturesMois: dernierRapport?.facturesMois?.length ?? 0,
+    };
   });
+  return NextResponse.json({ total: rows.length, rows });
 }

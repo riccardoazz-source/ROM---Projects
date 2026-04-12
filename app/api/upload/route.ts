@@ -69,14 +69,16 @@ export async function POST(req: NextRequest) {
 
     const nbCommandes = rapport.commandes.length;
     const nbFactures = rapport.factures.length;
+    const nbFacturesMois = rapport.facturesMois.length;
+    const textLen = extractedText.length;
 
     return NextResponse.json({
       success: true,
-      message: `Rapport "${mois}" importé pour "${projet.nom}". ${nbCommandes} commande(s) et ${nbFactures} facture(s) extraites.`,
+      message: `Rapport "${mois}" importé pour "${projet.nom}" [id:${projetId}]. ${nbCommandes} commande(s), ${nbFactures} facture(s), ${nbFacturesMois} bordereau(x). Texte PDF: ${textLen} car.`,
       projetId,
       projetNom: projet.nom,
       mois,
-      stats: { nbCommandes, nbFactures, nbFacturesMois: rapport.facturesMois.length },
+      stats: { nbCommandes, nbFactures, nbFacturesMois, textLen },
     });
   } catch (error) {
     console.error('Upload error:', error);
