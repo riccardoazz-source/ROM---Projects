@@ -51,7 +51,7 @@ export default function ParametresPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch('/api/sync');
+      const res = await fetch('/api/import-drive');
       const data = await res.json();
       setSyncResult(data);
     } catch {
