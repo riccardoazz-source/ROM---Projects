@@ -572,7 +572,7 @@ export function parseRapportFromPdf(
   const facturesMois: FactureMois[] = [];
 
   // Build société list including facture sociétés
-  const bordereauSocietes = [...new Set([...allKnownSocietes, ...factures.map(f => f.societe)])];
+  const bordereauSocietes = Array.from(new Set(allKnownSocietes.concat(factures.map(f => f.societe))));
   const bordereauLines = bordereauSection.split('\n').map(l => l.trim());
 
   for (const l of bordereauLines) {
