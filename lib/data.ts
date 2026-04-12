@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { Projet, RapportMensuel, Facture } from '@/types';
 import { supabase } from './db';
 
@@ -37,6 +38,7 @@ export async function saveConfig(config: AppConfig): Promise<void> {
 // ─── Projets ─────────────────────────────────────────────────────────────────
 
 export async function getAllProjets(): Promise<Projet[]> {
+  noStore();
   const { data } = await supabase
     .from('projets')
     .select('id, data');
@@ -47,6 +49,7 @@ export async function getAllProjets(): Promise<Projet[]> {
 }
 
 export async function getProjetById(id: string): Promise<Projet | null> {
+  noStore();
   const { data } = await supabase
     .from('projets')
     .select('id, data')
