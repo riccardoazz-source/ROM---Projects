@@ -260,7 +260,7 @@ function classifyByTotals(
 
   const result: RawCommande[] = [];
 
-  for (const [, rowEntries] of [...byLine.entries()].sort(([a], [b]) => a - b)) {
+  for (const [, rowEntries] of Array.from(byLine.entries()).sort(([a], [b]) => a - b)) {
     let colIdx = 0;
 
     for (const e of rowEntries) {
