@@ -43,7 +43,7 @@ export async function GET() {
     if (pingErr) {
       return NextResponse.json({ success: false, message: `Supabase inaccessible: ${pingErr.message}`, log });
     }
-    log.push('Supabase: connexion OK');
+    log.push('Supabase: connexion OK [sync v3 — télécharge et parse les PDFs]');
 
     // ── Step 1: load config ───────────────────────────────────────────────
     const config = await getConfig();
