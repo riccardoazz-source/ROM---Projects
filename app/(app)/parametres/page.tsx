@@ -170,10 +170,10 @@ export default function ParametresPage() {
                   </p>
                 </div>
                 {syncResult.results && syncResult.results.length > 0 && (
-                  <ul className="text-xs space-y-1 ml-6 mt-2">
+                  <ul className="text-xs space-y-1 ml-6 mt-2 font-mono">
                     {syncResult.results.map((r, i) => (
-                      <li key={i} className={`flex items-center gap-1 ${r.includes('] OK') ? 'text-green-700' : 'text-red-600'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full inline-block ${r.includes('] OK') ? 'bg-green-500' : 'bg-red-400'}`} />
+                      <li key={i} className={`flex items-start gap-1 ${r.includes('] OK') ? 'text-green-700' : r.startsWith('Supabase') || r.startsWith('Config') || r.match(/^\d/) ? 'text-gray-500' : 'text-red-600'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full inline-block mt-1 flex-shrink-0 ${r.includes('] OK') ? 'bg-green-500' : r.startsWith('Supabase') || r.startsWith('Config') || r.match(/^\d/) ? 'bg-gray-300' : 'bg-red-400'}`} />
                         {r}
                       </li>
                     ))}

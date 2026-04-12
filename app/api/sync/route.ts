@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getConfig, saveConfig } from '@/lib/data';
+import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport } from '@/lib/data';
+import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
 import { supabase } from '@/lib/db';
+import { RapportMensuel } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -17,6 +19,13 @@ async function driveGet(q: string, fields: string, apiKey: string) {
   return { ok: true as const, files: (json.files || []) as Array<{ id: string; name: string; mimeType: string; modifiedTime: string }> };
 }
 
+async function downloadFile(fileId: string, apiKey: string): Promise<Buffer | null> {
+  const url = `${BASE}/${fileId}?alt=media&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
+}
+
 function parseFolder(folderName: string): { nom: string; client: string; id: string } {
   const parts = folderName.split(/\s*-\s*/);
   const nom = parts[0]?.trim() || folderName;
@@ -29,18 +38,10 @@ export async function GET() {
   const log: string[] = [];
 
   try {
-    // ── Step 0: test direct Supabase write ────────────────────────────────
-    const { error: pingErr } = await supabase
-      .from('projets')
-      .select('id')
-      .limit(1);
-
+    // ── Step 0: check Supabase ────────────────────────────────────────────
+    const { error: pingErr } = await supabase.from('projets').select('id').limit(1);
     if (pingErr) {
-      return NextResponse.json({
-        success: false,
-        message: `Supabase inaccessible: ${pingErr.message} (${pingErr.code})`,
-        log,
-      });
+      return NextResponse.json({ success: false, message: `Supabase inaccessible: ${pingErr.message}`, log });
     }
     log.push('Supabase: connexion OK');
 
@@ -50,69 +51,112 @@ export async function GET() {
     const apiKey = config.googleApiKey || process.env.GOOGLE_DRIVE_API_KEY || '';
 
     log.push(`Config: rootId=${rootId || 'VIDE'}, apiKey=${apiKey ? 'OK' : 'VIDE'}`);
-
     if (!rootId) return NextResponse.json({ success: false, message: "Aucun dossier Drive configuré.", log });
     if (!apiKey) return NextResponse.json({ success: false, message: "Clé API Drive manquante.", log });
 
-    // ── Step 2: list subfolders ───────────────────────────────────────────
+    // ── Step 2: list project subfolders ───────────────────────────────────
     const rootResult = await driveGet(
       `'${rootId}' in parents and trashed=false`,
       'files(id,name,mimeType)',
       apiKey,
     );
     if (!rootResult.ok) {
-      return NextResponse.json({ success: false, message: `Drive API error (${rootResult.status}): ${rootResult.message}`, log });
+      return NextResponse.json({ success: false, message: `Drive API (${rootResult.status}): ${rootResult.message}`, log });
     }
 
     const folders = rootResult.files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-    log.push(`Drive: ${folders.length} dossier(s) trouvé(s)`);
+    log.push(`${folders.length} dossier(s) de projet trouvé(s)`);
 
     if (folders.length === 0) {
-      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé.", log });
+      return NextResponse.json({ success: false, message: "Aucun sous-dossier trouvé dans le dossier Drive.", log });
     }
 
-    // ── Step 3: for each folder, upsert project directly ─────────────────
-    let created = 0, existing = 0, errors = 0;
+    // ── Step 3: download + parse latest PDF in each folder ────────────────
+    let processed = 0, errors = 0;
 
     for (const folder of folders) {
       const { nom, client, id } = parseFolder(folder.name);
 
       try {
-        // Check if exists WITH valid data
-        const { data: rows } = await supabase
-          .from('projets')
-          .select('data')
-          .eq('id', id);
+        // List PDFs in this project folder
+        const pdfsResult = await driveGet(
+          `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
+          'files(id,name,modifiedTime)',
+          apiKey,
+        );
 
-        const hasValidData = rows && rows.length > 0 && rows[0].data?.nom;
-        if (hasValidData) {
-          existing++;
-          log.push(`[${folder.name}] existant (id: ${id})`);
+        if (!pdfsResult.ok) {
+          errors++;
+          log.push(`[${folder.name}] Erreur liste PDFs: ${pdfsResult.message}`);
           continue;
         }
 
-        // Create or repair project (row exists but data is null/invalid)
-        const newProjet = {
-          id,
-          shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
-          nom,
-          client,
-          statut: 'en_cours',
-          rapports: [],
-          historiqueChart: [],
+        if (pdfsResult.files.length === 0) {
+          log.push(`[${folder.name}] Aucun PDF trouvé`);
+          continue;
+        }
+
+        // Pick most recent PDF by modifiedTime
+        const latest = pdfsResult.files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
+
+        // Download PDF binary
+        const buffer = await downloadFile(latest.id, apiKey);
+        if (!buffer) {
+          errors++;
+          log.push(`[${folder.name}] Erreur téléchargement: ${latest.name}`);
+          continue;
+        }
+
+        // Extract text from PDF
+        let extractedText = '';
+        try {
+          const pdfParse = (await import('pdf-parse')).default;
+          const pdfData = await pdfParse(buffer);
+          extractedText = pdfData.text;
+        } catch (e) {
+          errors++;
+          log.push(`[${folder.name}] Erreur lecture PDF: ${e instanceof Error ? e.message : String(e)}`);
+          continue;
+        }
+
+        // Parse rapport data
+        const filename = latest.name;
+        const mois = extractMoisFromFilename(filename);
+        const date = extractDateFromFilename(filename);
+        const parsed = extractedText ? parseRapportFromPdf(extractedText, filename) : {};
+
+        const rapport: RapportMensuel = {
+          date,
+          mois,
+          nombreTotalCommandes:        parsed.nombreTotalCommandes        ?? 0,
+          nombreTotalAvenants:          parsed.nombreTotalAvenants          ?? 0,
+          nombreCommandesActives:       parsed.nombreCommandesActives       ?? 0,
+          nombreTotalFactures:          parsed.nombreTotalFactures          ?? 0,
+          montantTotalCommandesHT:      parsed.montantTotalCommandesHT      ?? 0,
+          montantTotalFacturesHT:       parsed.montantTotalFacturesHT       ?? 0,
+          totalCommandesHonorairesHT:   parsed.totalCommandesHonorairesHT   ?? 0,
+          totalCommandesTravauxHT:      parsed.totalCommandesTravauxHT      ?? 0,
+          totalCommandesDiversHT:       parsed.totalCommandesDiversHT       ?? 0,
+          totalTVACommandes:            parsed.totalTVACommandes            ?? 0,
+          totalTVAFactures:             parsed.totalTVAFactures             ?? 0,
+          nombreFacturesAvecRetenue:    parsed.nombreFacturesAvecRetenue    ?? 0,
+          montantTotalRetenueGarantieHT: parsed.montantTotalRetenueGarantieHT ?? 0,
+          montantTotalCommandesTTC:     parsed.montantTotalCommandesTTC     ?? 0,
+          montantTotalFacturesTTC:      parsed.montantTotalFacturesTTC      ?? 0,
+          pourcentageAvancementMois:    parsed.pourcentageAvancementMois    ?? 0,
+          pourcentageAvancementTotal:   parsed.pourcentageAvancementTotal   ?? 0,
+          commandes:    parsed.commandes    ?? [],
+          factures:     parsed.factures     ?? [],
+          facturesMois: parsed.facturesMois ?? [],
         };
 
-        const { error: insErr } = await supabase
-          .from('projets')
-          .upsert({ id, data: newProjet });
+        // Save to Supabase
+        await createOrGetProjet(id, nom, client);
+        await addOrUpdateRapport(id, rapport);
 
-        if (insErr) {
-          errors++;
-          log.push(`[${folder.name}] ERREUR INSERT: ${insErr.message} (${insErr.code})`);
-        } else {
-          created++;
-          log.push(`[${folder.name}] CRÉÉ (id: ${id})`);
-        }
+        processed++;
+        log.push(`[${folder.name}] OK — ${rapport.commandes.length} commandes, ${rapport.factures.length} factures (${mois})`);
+
       } catch (e) {
         errors++;
         log.push(`[${folder.name}] EXCEPTION: ${e instanceof Error ? e.message : String(e)}`);
@@ -120,16 +164,13 @@ export async function GET() {
     }
 
     // ── Step 4: update lastSync ───────────────────────────────────────────
-    try {
-      await saveConfig({ ...config, lastSync: new Date().toISOString() });
-    } catch { /* non bloquant */ }
+    try { await saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
 
     return NextResponse.json({
       success: true,
-      message: `${folders.length} dossiers — ${created} créé(s), ${existing} existant(s), ${errors} erreur(s)`,
+      message: `${processed} rapport(s) importé(s), ${errors} erreur(s) sur ${folders.length} dossiers`,
       results: log,
-      created,
-      existing,
+      processed,
       errors,
     });
 
