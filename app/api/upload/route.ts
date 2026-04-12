@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjetById, createOrGetProjet, addOrUpdateRapport } from '@/lib/data';
+import { getProjetById, createOrGetProjet, addOrUpdateRapport, getDernierRapport } from '@/lib/data';
 import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
 import { RapportMensuel } from '@/types';
 
@@ -72,13 +72,19 @@ export async function POST(req: NextRequest) {
     const nbFacturesMois = rapport.facturesMois.length;
     const textLen = extractedText.length;
 
+    // Read back to verify persistence
+    const saved = await getProjetById(projetId);
+    const savedRapport = saved ? getDernierRapport(saved) : null;
+    const savedCmds = savedRapport?.commandes?.length ?? 0;
+    const savedFacts = savedRapport?.factures?.length ?? 0;
+
     return NextResponse.json({
       success: true,
-      message: `Rapport "${mois}" importé pour "${projet.nom}" [id:${projetId}]. ${nbCommandes} commande(s), ${nbFactures} facture(s), ${nbFacturesMois} bordereau(x). Texte PDF: ${textLen} car.`,
+      message: `Rapport "${mois}" importé pour "${projet.nom}". Parsé: ${nbCommandes} cmd, ${nbFactures} fact. Sauvegardé (vérif): ${savedCmds} cmd, ${savedFacts} fact. Texte: ${textLen} car.`,
       projetId,
       projetNom: projet.nom,
       mois,
-      stats: { nbCommandes, nbFactures, nbFacturesMois, textLen },
+      stats: { nbCommandes, nbFactures, nbFacturesMois, textLen, savedCmds, savedFacts },
     });
   } catch (error) {
     console.error('Upload error:', error);

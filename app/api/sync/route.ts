@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport } from '@/lib/data';
+import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport, getProjetById } from '@/lib/data';
 import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
 import { supabase } from '@/lib/db';
 import { RapportMensuel } from '@/types';
@@ -154,8 +154,16 @@ export async function GET() {
         await createOrGetProjet(id, nom, client);
         await addOrUpdateRapport(id, rapport);
 
+        // Read back to verify persistence
+        const saved = await getProjetById(id);
+        const savedRapport = saved?.rapports?.reduce(
+          (a: any, b: any) => (!a || b.date > a.date ? b : a), null
+        );
+        const savedCmds = savedRapport?.commandes?.length ?? 0;
+        const savedFacts = savedRapport?.factures?.length ?? 0;
+
         processed++;
-        log.push(`[${folder.name}] OK — ${rapport.commandes.length} commandes, ${rapport.factures.length} factures (${mois})`);
+        log.push(`[${folder.name}] OK — parsed: ${rapport.commandes.length} cmds, ${rapport.factures.length} facts → saved: ${savedCmds} cmds, ${savedFacts} facts (${mois})`);
 
       } catch (e) {
         errors++;
