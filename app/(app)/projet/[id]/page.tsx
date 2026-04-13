@@ -89,22 +89,22 @@ export default async function ProjetPage({ params }: PageProps) {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-rom-600 transition-colors">Tableau de bord</Link>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <Link href="/projets" className="hover:text-rom-600 transition-colors">Projets</Link>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span className="text-gray-900 font-medium">{projet.nom} — {projet.client}</span>
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 min-w-0">
+        <Link href="/" className="hover:text-rom-600 transition-colors flex-shrink-0">Tableau de bord</Link>
+        <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+        <Link href="/projets" className="hover:text-rom-600 transition-colors flex-shrink-0 hidden sm:inline">Projets</Link>
+        <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 hidden sm:inline" />
+        <span className="text-gray-900 font-medium truncate">{projet.nom}</span>
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{projet.nom}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{projet.nom}</h1>
           <p className="text-gray-500 mt-1 text-sm">{projet.client} · {projet.description}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="text-left sm:text-right">
             <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
             <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
           </div>

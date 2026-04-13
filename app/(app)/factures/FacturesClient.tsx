@@ -54,9 +54,9 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Recherche de factures</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recherche de factures</h1>
           <p className="text-gray-500 mt-1 text-sm">
             Consultez et recherchez toutes les factures validées de tous les projets
           </p>
@@ -64,7 +64,7 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
         <button
           onClick={exportCSV}
           disabled={filtered.length === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+          className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-blue-50 disabled:opacity-40 transition-colors"
         >
           <Download className="w-4 h-4" /> Export CSV
         </button>
@@ -183,9 +183,9 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
               </tbody>
               <tfoot>
                 <tr className="bg-rom-600 text-white font-bold">
-                  <td colSpan={5} className="px-4 py-3 text-sm">TOTAL ({filtered.length} factures)</td>
-                  <td className="px-4 py-3 text-right text-sm">{formatMontant(totalHT)}</td>
-                  <td className="px-4 py-3 text-right text-sm">{formatMontant(totalTTC)}</td>
+                  <td colSpan={5}>TOTAL ({filtered.length} factures)</td>
+                  <td className="text-right">{formatMontant(totalHT)}</td>
+                  <td className="text-right">{formatMontant(totalTTC)}</td>
                   <td colSpan={3} />
                 </tr>
               </tfoot>

@@ -42,17 +42,17 @@ export default async function PartageProjetPage({ params }: PageProps) {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
           <RomLogoShare />
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="text-right hidden sm:block">
               <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Rapport partagé</p>
               <p className="text-sm font-bold text-gray-700">{rapport.mois}</p>
             </div>
-            <div className="w-px h-10 bg-slate-200" />
-            <div>
-              <p className="text-base font-bold text-rom-800">{projet.nom}</p>
-              <p className="text-xs text-gray-500 font-medium">{projet.client}</p>
+            <div className="w-px h-10 bg-slate-200 hidden sm:block" />
+            <div className="min-w-0 text-right sm:text-left">
+              <p className="text-sm font-bold text-rom-800 truncate">{projet.nom}</p>
+              <p className="text-xs text-gray-500 font-medium">{rapport.mois}</p>
             </div>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default async function PartageProjetPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
         {/* KPI Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -78,10 +78,10 @@ export default async function PartageProjetPage({ params }: PageProps) {
             { label: 'Avancement global', value: `${rapport.pourcentageAvancementTotal}%`, sub: `Ce mois : ${rapport.pourcentageAvancementMois}%`, color: 'bg-green-50 border-green-100', text: 'text-green-600' },
             { label: 'Commandes actives', value: `${rapport.nombreCommandesActives}`, sub: `${rapport.nombreTotalCommandes} total · ${rapport.nombreTotalAvenants} avenants`, color: 'bg-slate-50 border-slate-200', text: 'text-slate-700' },
           ].map((kpi, i) => (
-            <div key={i} className={`rounded-2xl border p-5 ${kpi.color}`}>
-              <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${kpi.text}`}>{kpi.label}</p>
-              <p className="text-lg font-bold text-gray-900">{kpi.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{kpi.sub}</p>
+            <div key={i} className={`rounded-2xl border p-3 sm:p-5 ${kpi.color}`}>
+              <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1.5 ${kpi.text}`}>{kpi.label}</p>
+              <p className="text-sm sm:text-lg font-bold text-gray-900 break-all">{kpi.value}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{kpi.sub}</p>
             </div>
           ))}
         </div>
@@ -176,7 +176,7 @@ export default async function PartageProjetPage({ params }: PageProps) {
         {/* Bordereau du mois */}
         {rapport.facturesMois.length > 0 && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-blue-100 bg-blue-50 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-blue-100 bg-blue-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
               <h2 className="text-sm font-bold text-rom-700 uppercase tracking-wider flex items-center gap-2">
                 <Calendar className="w-4 h-4" /> Bordereau du mois — {rapport.mois}
               </h2>

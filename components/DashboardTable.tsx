@@ -37,8 +37,8 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
 
   return (
     <div className="card overflow-hidden">
-      {/* Header + filter inline */}
-      <div className="section-header flex items-center justify-between gap-4 pr-4">
+      {/* Header + filter */}
+      <div className="section-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 sm:pr-4">
         <span>Récapitulatif financier — tous projets</span>
         <div className="relative flex-shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
@@ -48,7 +48,7 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-8 pr-7 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg
-                       text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 w-48"
+                       text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 w-full sm:w-48"
           />
           {search && (
             <button onClick={() => setSearch('')}

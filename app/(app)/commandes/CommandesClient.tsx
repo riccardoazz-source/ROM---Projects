@@ -75,15 +75,15 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Recherche de commandes</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recherche de commandes</h1>
           <p className="text-gray-500 mt-1 text-sm">Consultez et filtrez toutes les commandes par projet, société ou type</p>
         </div>
         <button
           onClick={exportCSV}
           disabled={filtered.length === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-rom-50 disabled:opacity-40 transition-colors"
+          className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-rom-50 disabled:opacity-40 transition-colors"
         >
           ↓ Export CSV
         </button>
@@ -137,18 +137,18 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="rom-card p-4 bg-blue-50">
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Commandes filtrées</p>
-          <p className="text-2xl font-bold text-gray-900">{filtered.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+        <div className="rom-card p-3 sm:p-4 bg-blue-50">
+          <p className="text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Filtrées</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{filtered.length}</p>
         </div>
-        <div className="rom-card p-4 bg-slate-50">
-          <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Total Montant HT</p>
-          <p className="text-xl font-bold text-gray-900">{fmt(totalHT)}</p>
+        <div className="rom-card p-3 sm:p-4 bg-slate-50">
+          <p className="text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Total HT</p>
+          <p className="text-sm sm:text-xl font-bold text-gray-900 break-all">{fmt(totalHT)}</p>
         </div>
-        <div className="rom-card p-4 bg-orange-50">
-          <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Restant HT</p>
-          <p className="text-xl font-bold text-orange-700">{fmt(totalRestant)}</p>
+        <div className="rom-card p-3 sm:p-4 bg-orange-50">
+          <p className="text-[10px] sm:text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Restant HT</p>
+          <p className="text-sm sm:text-xl font-bold text-orange-700 break-all">{fmt(totalRestant)}</p>
         </div>
       </div>
 
@@ -213,9 +213,9 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={4} className="px-4 py-3 text-sm">TOTAL ({filtered.length} commandes)</td>
-                  <td className="px-4 py-3 text-right text-sm">{fmt(totalHT)}</td>
-                  <td className="px-4 py-3 text-right text-sm">{fmt(totalRestant)}</td>
+                  <td colSpan={4}>TOTAL ({filtered.length} commandes)</td>
+                  <td className="text-right">{fmt(totalHT)}</td>
+                  <td className="text-right">{fmt(totalRestant)}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
