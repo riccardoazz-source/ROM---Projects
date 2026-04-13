@@ -1,6 +1,5 @@
 /**
  * /api/import-drive  — download and parse every PDF from Google Drive.
- * New route (replaces /api/sync which only created empty project shells).
  */
 import { NextResponse } from 'next/server';
 import { getConfig, saveConfig, getProjetById, saveProjet } from '@/lib/data';
@@ -43,6 +42,94 @@ function folderParts(name: string): { nom: string; client: string; id: string } 
   };
 }
 
+async function processFolder(
+  folder: { id: string; name: string },
+  apiKey: string,
+): Promise<{ ok: boolean; msg: string }> {
+  const { nom, client, id } = folderParts(folder.name);
+
+  // List PDFs
+  const pdfsRes = await driveGet(
+    `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
+    'files(id,name,modifiedTime)',
+    apiKey,
+  );
+  if (!pdfsRes.ok) return { ok: false, msg: `[${folder.name}] Erreur liste PDFs: ${pdfsRes.message}` };
+  if (pdfsRes.files.length === 0) return { ok: false, msg: `[${folder.name}] Aucun PDF` };
+
+  // Most-recent PDF
+  const latest = pdfsRes.files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
+
+  // Download
+  const buffer = await downloadPdf(latest.id, apiKey);
+  if (!buffer) return { ok: false, msg: `[${folder.name}] Téléchargement échoué: ${latest.name}` };
+
+  // Parse PDF text
+  let text = '';
+  try {
+    const pdfParse = (await import('pdf-parse')).default;
+    const pdfData = await pdfParse(buffer);
+    text = pdfData.text;
+  } catch (e) {
+    return { ok: false, msg: `[${folder.name}] Erreur PDF: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  // Parse rapport
+  const mois = extractMoisFromFilename(latest.name);
+  const date = extractDateFromFilename(latest.name);
+  const parsed = text ? parseRapportFromPdf(text, latest.name) : {};
+
+  const rapport: RapportMensuel = {
+    date,
+    mois,
+    nombreTotalCommandes:           parsed.nombreTotalCommandes           ?? 0,
+    nombreTotalAvenants:             parsed.nombreTotalAvenants             ?? 0,
+    nombreCommandesActives:          parsed.nombreCommandesActives          ?? 0,
+    nombreTotalFactures:             parsed.nombreTotalFactures             ?? 0,
+    montantTotalCommandesHT:         parsed.montantTotalCommandesHT         ?? 0,
+    montantTotalFacturesHT:          parsed.montantTotalFacturesHT          ?? 0,
+    totalCommandesHonorairesHT:      parsed.totalCommandesHonorairesHT      ?? 0,
+    totalCommandesTravauxHT:         parsed.totalCommandesTravauxHT         ?? 0,
+    totalCommandesDiversHT:          parsed.totalCommandesDiversHT          ?? 0,
+    totalTVACommandes:               parsed.totalTVACommandes               ?? 0,
+    totalTVAFactures:                parsed.totalTVAFactures                ?? 0,
+    nombreFacturesAvecRetenue:       parsed.nombreFacturesAvecRetenue       ?? 0,
+    montantTotalRetenueGarantieHT:   parsed.montantTotalRetenueGarantieHT   ?? 0,
+    montantTotalCommandesTTC:        parsed.montantTotalCommandesTTC        ?? 0,
+    montantTotalFacturesTTC:         parsed.montantTotalFacturesTTC         ?? 0,
+    pourcentageAvancementMois:       parsed.pourcentageAvancementMois       ?? 0,
+    pourcentageAvancementTotal:      parsed.pourcentageAvancementTotal      ?? 0,
+    commandes:    parsed.commandes    ?? [],
+    factures:     parsed.factures     ?? [],
+    facturesMois: parsed.facturesMois ?? [],
+  };
+
+  // Save: replace the entire rapports array with ONLY this rapport
+  const existing = await getProjetById(id);
+  const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
+  const projet = existing ?? {
+    id,
+    shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+    nom,
+    client,
+    statut: 'en_cours' as const,
+    rapports: [],
+    historiqueChart: [],
+  };
+  projet.rapports = [rapport];
+  projet.historiqueChart = [{
+    date: label,
+    montantCommandesHT: rapport.montantTotalCommandesHT,
+    montantFacturesHT:  rapport.montantTotalFacturesHT,
+  }];
+  await saveProjet(projet);
+
+  return {
+    ok: true,
+    msg: `[${folder.name}] OK — ${rapport.commandes.length} cmds, ${rapport.factures.length} facts (${mois})`,
+  };
+}
+
 export async function GET() {
   const log: string[] = [];
 
@@ -65,131 +152,37 @@ export async function GET() {
     if (!rootResult.ok) return NextResponse.json({ success: false, message: `Drive (${rootResult.status}): ${rootResult.message}`, log });
 
     const folders = rootResult.files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-    log.push(`${folders.length} dossier(s) trouvé(s)`);
+    log.push(`${folders.length} dossier(s) trouvé(s): ${folders.map(f => f.name).join(', ')}`);
     if (folders.length === 0) return NextResponse.json({ success: false, message: 'Aucun sous-dossier trouvé.', log });
 
-    // 3. Process each folder
+    // Build the complete set of Drive folder IDs BEFORE processing.
+    // This is what we use for cleanup — NOT just the ones we successfully processed.
+    const allDriveIds = new Set(folders.map(f => folderId(f.name)));
+
+    // 3. Process all folders in parallel
+    const results = await Promise.all(folders.map(f => processFolder(f, apiKey)));
+
     let processed = 0, errors = 0;
-    const driveIds = new Set<string>(); // track which IDs we processed from Drive
-
-    for (const folder of folders) {
-      const { nom, client, id } = folderParts(folder.name);
-      try {
-        // List PDFs in folder
-        const pdfsRes = await driveGet(
-          `'${folder.id}' in parents and mimeType='application/pdf' and trashed=false`,
-          'files(id,name,modifiedTime)',
-          apiKey,
-        );
-        if (!pdfsRes.ok) {
-          errors++;
-          log.push(`[${folder.name}] Erreur liste PDFs: ${pdfsRes.message}`);
-          continue;
-        }
-        if (pdfsRes.files.length === 0) {
-          log.push(`[${folder.name}] Aucun PDF`);
-          continue;
-        }
-
-        // Most-recent PDF
-        const latest = pdfsRes.files.reduce((a, b) => a.modifiedTime > b.modifiedTime ? a : b);
-
-        // Download
-        const buffer = await downloadPdf(latest.id, apiKey);
-        if (!buffer) {
-          errors++;
-          log.push(`[${folder.name}] Téléchargement échoué: ${latest.name}`);
-          continue;
-        }
-
-        // Parse PDF text
-        let text = '';
-        try {
-          const pdfParse = (await import('pdf-parse')).default;
-          const pdfData = await pdfParse(buffer);
-          text = pdfData.text;
-        } catch (e) {
-          errors++;
-          log.push(`[${folder.name}] Erreur PDF: ${e instanceof Error ? e.message : String(e)}`);
-          continue;
-        }
-
-        // Parse rapport
-        const mois = extractMoisFromFilename(latest.name);
-        const date = extractDateFromFilename(latest.name);
-        const parsed = text ? parseRapportFromPdf(text, latest.name) : {};
-
-        const rapport: RapportMensuel = {
-          date,
-          mois,
-          nombreTotalCommandes:           parsed.nombreTotalCommandes           ?? 0,
-          nombreTotalAvenants:             parsed.nombreTotalAvenants             ?? 0,
-          nombreCommandesActives:          parsed.nombreCommandesActives          ?? 0,
-          nombreTotalFactures:             parsed.nombreTotalFactures             ?? 0,
-          montantTotalCommandesHT:         parsed.montantTotalCommandesHT         ?? 0,
-          montantTotalFacturesHT:          parsed.montantTotalFacturesHT          ?? 0,
-          totalCommandesHonorairesHT:      parsed.totalCommandesHonorairesHT      ?? 0,
-          totalCommandesTravauxHT:         parsed.totalCommandesTravauxHT         ?? 0,
-          totalCommandesDiversHT:          parsed.totalCommandesDiversHT          ?? 0,
-          totalTVACommandes:               parsed.totalTVACommandes               ?? 0,
-          totalTVAFactures:                parsed.totalTVAFactures                ?? 0,
-          nombreFacturesAvecRetenue:       parsed.nombreFacturesAvecRetenue       ?? 0,
-          montantTotalRetenueGarantieHT:   parsed.montantTotalRetenueGarantieHT   ?? 0,
-          montantTotalCommandesTTC:        parsed.montantTotalCommandesTTC        ?? 0,
-          montantTotalFacturesTTC:         parsed.montantTotalFacturesTTC         ?? 0,
-          pourcentageAvancementMois:       parsed.pourcentageAvancementMois       ?? 0,
-          pourcentageAvancementTotal:      parsed.pourcentageAvancementTotal      ?? 0,
-          commandes:    parsed.commandes    ?? [],
-          factures:     parsed.factures     ?? [],
-          facturesMois: parsed.facturesMois ?? [],
-        };
-
-        // Save: replace the entire rapports array with ONLY this rapport
-        // (no accumulation — each sync replaces with the latest Drive data)
-        const existing = await getProjetById(id);
-        const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
-        const projet = existing ?? {
-          id,
-          shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
-          nom,
-          client,
-          statut: 'en_cours' as const,
-          rapports: [],
-          historiqueChart: [],
-        };
-        // Replace rapports with single latest rapport
-        projet.rapports = [rapport];
-        projet.historiqueChart = [{
-          date: label,
-          montantCommandesHT: rapport.montantTotalCommandesHT,
-          montantFacturesHT:  rapport.montantTotalFacturesHT,
-        }];
-        await saveProjet(projet);
-
-        // Read-back to verify persistence
-        const saved = await getProjetById(id);
-        const sCmds  = saved?.rapports?.[0]?.commandes?.length  ?? 0;
-        const sFacts = saved?.rapports?.[0]?.factures?.length   ?? 0;
-
-        driveIds.add(id);
-        processed++;
-        log.push(`[${folder.name}] OK — parsé: ${rapport.commandes.length} cmds, ${rapport.factures.length} facts → sauvegardé: ${sCmds} cmds, ${sFacts} facts (${mois})`);
-
-      } catch (e) {
-        errors++;
-        log.push(`[${folder.name}] EXCEPTION: ${e instanceof Error ? e.message : String(e)}`);
-      }
+    for (const r of results) {
+      if (r.ok) processed++;
+      else errors++;
+      log.push(r.msg);
     }
 
-    // 4. Remove projects from Supabase that no longer exist in Drive
+    // 4. Remove Supabase projects whose Drive folder no longer exists.
+    // We compare against ALL Drive folder IDs, so a failed-parse project is NOT deleted.
     try {
       const { data: allRows } = await supabase.from('projets').select('id');
-      const toDelete = (allRows ?? []).map(r => r.id).filter(id => !driveIds.has(id));
+      const toDelete = (allRows ?? []).map(r => r.id).filter(id => !allDriveIds.has(id));
       if (toDelete.length > 0) {
         await supabase.from('projets').delete().in('id', toDelete);
-        log.push(`Supprimé: ${toDelete.join(', ')}`);
+        log.push(`Supprimé (absent du Drive): ${toDelete.join(', ')}`);
+      } else {
+        log.push('Aucune suppression nécessaire');
       }
-    } catch { /* noop */ }
+    } catch (e) {
+      log.push(`Suppression ignorée: ${e instanceof Error ? e.message : String(e)}`);
+    }
 
     // 5. Update lastSync
     try { await saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
