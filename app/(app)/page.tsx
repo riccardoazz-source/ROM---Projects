@@ -26,11 +26,14 @@ export default async function DashboardPage() {
     totalFactures     += r.nombreTotalFactures;
     totalCommandes    += r.nombreTotalCommandes;
     sumAvance         += r.pourcentageAvancementTotal;
+    const dateStr = r.date && r.date.length === 8
+      ? `${r.date.slice(6,8)}/${r.date.slice(4,6)}/${r.date.slice(0,4)}`
+      : r.mois;
     rows.push({
       id: p.id,
       nom: p.nom,
       client: p.client,
-      mois: r.mois,
+      mois: dateStr,
       commandesHT: r.montantTotalCommandesHT,
       facturesHT: r.montantTotalFacturesHT,
       commandes: r.nombreTotalCommandes,

@@ -3,12 +3,15 @@
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
 
@@ -43,6 +46,51 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function EvolutionChart({ data }: EvolutionChartProps) {
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[280px] text-gray-400 text-sm">
+        Aucune donnée historique disponible
+      </div>
+    );
+  }
+
+  if (data.length === 1) {
+    const point = data[0];
+    const barData = [
+      { name: 'Commandes HT', value: point.montantCommandesHT, fill: '#1B3A5C' },
+      { name: 'Factures HT', value: point.montantFacturesHT, fill: '#ED8936' },
+    ];
+    return (
+      <div>
+        <p className="text-xs text-gray-400 text-center mb-3">Historique — 1 rapport disponible</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: '#718096' }}
+              axisLine={{ stroke: '#E2E8F0' }}
+              tickLine={false}
+            />
+            <YAxis
+              tickFormatter={formatYAxis}
+              tick={{ fontSize: 11, fill: '#718096' }}
+              axisLine={false}
+              tickLine={false}
+              width={55}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={80}>
+              {barData.map((entry, index) => (
+                <Cell key={index} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>

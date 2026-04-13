@@ -59,6 +59,7 @@ export interface RapportMensuel {
   commandes: Commande[];
   factures: Facture[];
   facturesMois: FactureMois[];
+  budget?: Array<{ libelle: string; montantHT: number }>;
 }
 
 export interface Projet {

@@ -45,7 +45,7 @@ export default function AvancementBarChart({ commandes, type }: AvancementBarCha
   }
 
   const data = filtered.map((c) => ({
-    societe: c.societe.length > 12 ? c.societe.substring(0, 12) + '…' : c.societe,
+    societe: c.societe,
     avancement: c.pourcentageAvancement,
     lot: c.lot,
     montantHT: c.montantHT,
@@ -73,7 +73,7 @@ export default function AvancementBarChart({ commandes, type }: AvancementBarCha
           tick={{ fontSize: 10, fill: '#4A5568' }}
           axisLine={false}
           tickLine={false}
-          width={110}
+          width={150}
         />
         <Tooltip content={<CustomTooltip />} />
         <Bar dataKey="avancement" radius={[0, 4, 4, 0]} maxBarSize={18}>

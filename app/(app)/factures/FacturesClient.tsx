@@ -12,7 +12,9 @@ export interface FactureResult extends Facture {
 }
 
 function formatMontant(value: number): string {
-  return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + ' €';
+  const n = typeof value === 'number' && isFinite(value) ? value : 0;
+  const [int, dec] = n.toFixed(2).split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
 }
 
 export default function FacturesClient({ factures }: { factures: FactureResult[] }) {

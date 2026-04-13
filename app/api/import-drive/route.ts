@@ -102,6 +102,7 @@ async function processFolder(
     commandes:    parsed.commandes    ?? [],
     factures:     parsed.factures     ?? [],
     facturesMois: parsed.facturesMois ?? [],
+    budget:       parsed.budget       ?? undefined,
   };
 
   // Save: replace the entire rapports array with ONLY this rapport

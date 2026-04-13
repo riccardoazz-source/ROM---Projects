@@ -6,7 +6,9 @@ import { Search, X } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
 
 function fmt(v: number) {
-  return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
+  const n = typeof v === 'number' && isFinite(v) ? v : 0;
+  const [int, dec] = n.toFixed(2).split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
 }
 
 export interface DashboardRow {
@@ -65,7 +67,7 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
             <tr>
               <th>Projet</th>
               <th>Client</th>
-              <th>Dernier rapport</th>
+              <th>Date rapport</th>
               <th className="text-right">Commandes HT</th>
               <th className="text-right">Factures HT</th>
               <th className="text-right">Cmd.</th>

@@ -18,7 +18,9 @@ export interface CommandeResult {
 }
 
 function fmt(v: number) {
-  return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
+  const n = typeof v === 'number' && isFinite(v) ? v : 0;
+  const [int, dec] = n.toFixed(2).split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
 }
 
 const TYPE_LABELS: Record<string, string> = {

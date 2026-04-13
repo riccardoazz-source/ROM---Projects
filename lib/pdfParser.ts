@@ -586,10 +586,33 @@ export function parseRapportFromPdf(
     if (fm && fm.montantHT > 0) facturesMois.push(fm);
   }
 
+  // ── 5. Budget ────────────────────────────────────────────────────────────
+  const budgetSection = getSection(text, 'Budget', [PAGE_BREAK]);
+  const budgetLines = budgetSection.split('\n').map(l => l.trim()).filter(Boolean);
+  const budget: Array<{ libelle: string; montantHT: number }> = [];
+  const AMT_RE_BUDGET = new RegExp(AMT, 'g');
+
+  for (const line of budgetLines) {
+    if (SKIP_LINE_RE.test(line)) continue;
+    if (line.toLowerCase() === 'budget') continue;
+    AMT_RE_BUDGET.lastIndex = 0;
+    const amounts: Array<{ match: string; index: number }> = [];
+    let bm: RegExpExecArray | null;
+    while ((bm = AMT_RE_BUDGET.exec(line)) !== null) {
+      amounts.push({ match: bm[0], index: bm.index });
+    }
+    if (amounts.length === 0) continue;
+    const lastAmt = amounts[amounts.length - 1];
+    const libelle = line.slice(0, lastAmt.index).trim();
+    if (!libelle) continue;
+    budget.push({ libelle, montantHT: parseMontant(lastAmt.match) });
+  }
+
   return {
     ...totals,
     commandes,
     factures,
     facturesMois,
+    ...(budget.length > 0 ? { budget } : {}),
   };
 }
