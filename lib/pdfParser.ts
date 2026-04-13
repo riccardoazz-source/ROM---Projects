@@ -587,14 +587,20 @@ export function parseRapportFromPdf(
   }
 
   // ── 5. Budget ────────────────────────────────────────────────────────────
-  const budgetSection = getSection(text, 'Budget', [PAGE_BREAK]);
+  // Search after "Bordereau de paiement" to avoid false positives — the word
+  // "Budget" can appear earlier in the document as a section end-marker.
+  const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');
+  const budgetSearchText = bpIdx !== -1 ? text.slice(bpIdx) : text;
+  const budgetSection = getSection(budgetSearchText, 'Budget', [PAGE_BREAK]);
   const budgetLines = budgetSection.split('\n').map(l => l.trim()).filter(Boolean);
   const budget: Array<{ libelle: string; montantHT: number }> = [];
   const AMT_RE_BUDGET = new RegExp(AMT, 'g');
+  // Narrower skip list: don't exclude honoraires/travaux/divers — those can be budget line labels
+  const BUDGET_SKIP_RE = /^(société|montant ht|% d'avancement|valeur ht|bordereau|tableau|liste des|date facture)\b/i;
 
   for (const line of budgetLines) {
-    if (SKIP_LINE_RE.test(line)) continue;
-    if (line.toLowerCase() === 'budget') continue;
+    if (!line || /^budget/i.test(line)) continue;
+    if (BUDGET_SKIP_RE.test(line)) continue;
     AMT_RE_BUDGET.lastIndex = 0;
     const amounts: Array<{ match: string; index: number }> = [];
     let bm: RegExpExecArray | null;

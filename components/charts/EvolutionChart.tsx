@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -11,7 +9,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
 
@@ -48,53 +45,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function EvolutionChart({ data }: EvolutionChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[280px] text-gray-400 text-sm">
-        Aucune donnée historique disponible
-      </div>
-    );
-  }
-
-  if (data.length === 1) {
-    const point = data[0];
-    const barData = [
-      { name: 'Commandes HT', value: point.montantCommandesHT, fill: '#1B3A5C' },
-      { name: 'Factures HT', value: point.montantFacturesHT, fill: '#ED8936' },
-    ];
-    return (
-      <div>
-        <p className="text-xs text-gray-400 text-center mb-3">Historique — 1 rapport disponible</p>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 11, fill: '#718096' }}
-              axisLine={{ stroke: '#E2E8F0' }}
-              tickLine={false}
-            />
-            <YAxis
-              tickFormatter={formatYAxis}
-              tick={{ fontSize: 11, fill: '#718096' }}
-              axisLine={false}
-              tickLine={false}
-              width={55}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={80}>
-              {barData.map((entry, index) => (
-                <Cell key={index} fill={entry.fill} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">
+        Aucune donnée disponible
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }} barGap={4} barCategoryGap="35%">
+        <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" vertical={false} />
         <XAxis
           dataKey="date"
           tick={{ fontSize: 11, fill: '#718096' }}
@@ -109,28 +69,10 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
           width={55}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend
-          wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-        />
-        <Line
-          type="monotone"
-          dataKey="montantCommandesHT"
-          name="Montant HT Commandes"
-          stroke="#1B3A5C"
-          strokeWidth={2.5}
-          dot={{ r: 3, fill: '#1B3A5C' }}
-          activeDot={{ r: 5 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="montantFacturesHT"
-          name="Montant HT Factures"
-          stroke="#ED8936"
-          strokeWidth={2.5}
-          dot={{ r: 3, fill: '#ED8936' }}
-          activeDot={{ r: 5 }}
-        />
-      </LineChart>
+        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+        <Bar dataKey="montantCommandesHT" name="Commandes HT" fill="#1B3A5C" radius={[4, 4, 0, 0]} maxBarSize={60} />
+        <Bar dataKey="montantFacturesHT" name="Factures HT" fill="#ED8936" radius={[4, 4, 0, 0]} maxBarSize={60} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }

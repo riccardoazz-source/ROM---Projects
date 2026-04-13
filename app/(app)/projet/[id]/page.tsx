@@ -66,6 +66,9 @@ export default async function ProjetPage({ params }: PageProps) {
         <StatCard label="Commandes"          value={`${rapport.nombreCommandesActives} actives`}      sub={`${rapport.nombreTotalCommandes} total · ${rapport.nombreTotalAvenants} avenants`} icon={Hash} accent="bg-violet-600" />
       </div>
 
+      {/* Bordereau de paiement — first section */}
+      <BordereauClient facturesMois={rapport.facturesMois} />
+
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Récapitulatif dépenses */}
@@ -239,8 +242,7 @@ export default async function ProjetPage({ params }: PageProps) {
       {/* Liste des factures validées — interactive client component */}
       <FacturesListClient factures={rapport.factures} />
 
-      {/* Bordereau de paiement — interactive client component */}
-      <BordereauClient factures={rapport.factures} />
+      {/* Bordereau de paiement is shown at the top, not duplicated here */}
     </div>
   );
 }
