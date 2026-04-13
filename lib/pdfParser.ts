@@ -1,4 +1,4 @@
-import { RapportMensuel, Commande, Facture, FactureMois } from '@/types';
+import { RapportMensuel, Commande, Facture, FactureMois, BudgetLigne, BudgetTable } from '@/types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -470,6 +470,107 @@ function parseBordereauLine(line: string, knownSocietes: string[]): FactureMois 
   };
 }
 
+// ─── Budget table parser ─────────────────────────────────────────────────────
+
+/**
+ * Parse the budget section (after Bordereau de paiement) into a typed table.
+ * Handles variable column counts and multi-page budgets (page separators filtered inline).
+ */
+function parseBudgetTable(rawText: string): BudgetTable | undefined {
+  if (!rawText.trim()) return undefined;
+
+  const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return undefined;
+
+  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture)\b/i;
+  const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus)\b/i;
+  const AMT_RE_B = new RegExp(AMT, 'g');
+
+  function getAmounts(line: string): number[] {
+    AMT_RE_B.lastIndex = 0;
+    const amts: number[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = AMT_RE_B.exec(line)) !== null) {
+      if (line[m.index + m[0].length] === '%') continue; // skip "7,00%"
+      amts.push(parseMontant(m[0]));
+    }
+    return amts;
+  }
+
+  function getLibelle(line: string): string {
+    let r = line.replace(new RegExp(AMT + '%?', 'g'), '');
+    r = r.replace(/(?:^|\s)-(?:\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+    return r.replace(/[.:,;]+$/, '').trim();
+  }
+
+  // Extract title ("Budget - 23 février 26")
+  let titre = '';
+  let startIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const l = lines[i];
+    if (/^budget\s*$/i.test(l) || /^budget\s*[-–]/i.test(l) || /^budget\s+\d/i.test(l)) {
+      titre = l;
+      startIdx = i + 1;
+      break;
+    }
+    if (getAmounts(l).length > 0) { startIdx = i; break; }
+    startIdx = i + 1;
+  }
+
+  // Detect column header lines (no amounts, before first data row)
+  const headerParts: string[] = [];
+  let dataStartIdx = startIdx;
+
+  for (let i = startIdx; i < Math.min(startIdx + 8, lines.length); i++) {
+    const l = lines[i];
+    if (!l || SKIP.test(l)) continue;
+    const amts = getAmounts(l);
+    if (amts.length > 0) { dataStartIdx = i; break; }
+    // Split on 2+ spaces to separate column names
+    const parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      // Skip first part if it's a row-label header like "Intitulés", "Désignation"
+      const toAdd = /^(intitulé|libellé|désignation|prestation)/i.test(parts[0]) ? parts.slice(1) : parts;
+      headerParts.push(...toAdd);
+    }
+    dataStartIdx = i + 1;
+  }
+
+  // Find max amount columns from all data rows
+  let maxAmts = 0;
+  for (let i = dataStartIdx; i < lines.length; i++) {
+    const n = getAmounts(lines[i]).length;
+    if (n > maxAmts) maxAmts = n;
+  }
+  if (maxAmts === 0) return undefined;
+
+  // Build colonnes (trim or pad to maxAmts)
+  const colonnes: string[] = headerParts.slice(0, maxAmts);
+  while (colonnes.length < maxAmts) colonnes.push(`Montant ${colonnes.length + 1}`);
+
+  // Parse data rows
+  const lignes: BudgetLigne[] = [];
+  for (let i = dataStartIdx; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line || SKIP.test(line)) continue;
+    if (/^budget\s*$/i.test(line) || /^budget\s*[-–]/i.test(line)) continue;
+
+    const amts = getAmounts(line);
+    const libelle = getLibelle(line);
+    if (!libelle && amts.length === 0) continue;
+
+    const type: BudgetLigne['type'] =
+      amts.length === 0 ? 'section' :
+      TOTAL_RE.test(libelle) ? 'total' : 'item';
+
+    const valeurs = [...amts, ...new Array(maxAmts - amts.length).fill(0)];
+    lignes.push({ libelle: libelle || '—', type, valeurs });
+  }
+
+  if (lignes.filter(l => l.type !== 'section').length === 0) return undefined;
+  return { titre, colonnes, lignes };
+}
+
 // ─── Main parser ─────────────────────────────────────────────────────────────
 
 export function parseRapportFromPdf(
@@ -587,38 +688,19 @@ export function parseRapportFromPdf(
   }
 
   // ── 5. Budget ────────────────────────────────────────────────────────────
-  // Search after "Bordereau de paiement" to avoid false positives — the word
-  // "Budget" can appear earlier in the document as a section end-marker.
+  // Budget appears after "Bordereau de paiement" in the PDF and can span
+  // multiple pages. We use parseBudgetTable() to extract the full table.
   const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');
-  const budgetSearchText = bpIdx !== -1 ? text.slice(bpIdx) : text;
-  const budgetSection = getSection(budgetSearchText, 'Budget', [PAGE_BREAK]);
-  const budgetLines = budgetSection.split('\n').map(l => l.trim()).filter(Boolean);
-  const budget: Array<{ libelle: string; montantHT: number }> = [];
-  const AMT_RE_BUDGET = new RegExp(AMT, 'g');
-  // Narrower skip list: don't exclude honoraires/travaux/divers — those can be budget line labels
-  const BUDGET_SKIP_RE = /^(société|montant ht|% d'avancement|valeur ht|bordereau|tableau|liste des|date facture)\b/i;
-
-  for (const line of budgetLines) {
-    if (!line || /^budget/i.test(line)) continue;
-    if (BUDGET_SKIP_RE.test(line)) continue;
-    AMT_RE_BUDGET.lastIndex = 0;
-    const amounts: Array<{ match: string; index: number }> = [];
-    let bm: RegExpExecArray | null;
-    while ((bm = AMT_RE_BUDGET.exec(line)) !== null) {
-      amounts.push({ match: bm[0], index: bm.index });
-    }
-    if (amounts.length === 0) continue;
-    const lastAmt = amounts[amounts.length - 1];
-    const libelle = line.slice(0, lastAmt.index).trim();
-    if (!libelle) continue;
-    budget.push({ libelle, montantHT: parseMontant(lastAmt.match) });
-  }
+  const afterBordereau = bpIdx !== -1 ? text.slice(bpIdx) : text;
+  const budgetPos = afterBordereau.toLowerCase().search(/\nbudget[\s\S]|^budget[\s\S]/);
+  const budgetRaw = budgetPos !== -1 ? afterBordereau.slice(budgetPos).replace(/^\n/, '') : '';
+  const budget = budgetRaw ? parseBudgetTable(budgetRaw) : undefined;
 
   return {
     ...totals,
     commandes,
     factures,
     facturesMois,
-    ...(budget.length > 0 ? { budget } : {}),
+    ...(budget ? { budget } : {}),
   };
 }

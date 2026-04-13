@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search, XCircle, CheckCircle } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
-import { Commande, Facture, FactureMois } from '@/types';
+import { Commande, Facture } from '@/types';
 
 function fmt(v: number) {
   const n = typeof v === 'number' && isFinite(v) ? v : 0;
@@ -253,30 +253,33 @@ function monthKeyToLabel(key: string): string {
   return `${FRENCH_MONTHS[idx]} ${yyyy}`;
 }
 
-export function BordereauClient({ facturesMois }: { facturesMois: FactureMois[] }) {
-  // Extract unique month keys from dateValidation, sorted descending (most recent first)
+export function BordereauClient({ factures }: { factures: Facture[] }) {
+  // Group factures by MM/YYYY of dateValidationAMO (format: DD/MM/YYYY)
   const monthKeys = useMemo(() => {
     const keys = new Set<string>();
-    for (const f of facturesMois) {
-      const k = getMonthKey(f.dateValidation);
+    for (const f of factures) {
+      const k = getMonthKey(f.dateValidationAMO);
       if (k) keys.add(k);
     }
+    // Sort descending: most recent month first
     return Array.from(keys).sort((a, b) => {
       const [amm, ayyyy] = a.split('/');
       const [bmm, byyyy] = b.split('/');
       return (parseInt(byyyy) * 100 + parseInt(bmm)) - (parseInt(ayyyy) * 100 + parseInt(amm));
     });
-  }, [facturesMois]);
+  }, [factures]);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => monthKeys[0] ?? '');
 
   const filtered = useMemo(() => {
-    if (!selectedMonth) return facturesMois;
-    return facturesMois.filter((f) => getMonthKey(f.dateValidation) === selectedMonth);
-  }, [facturesMois, selectedMonth]);
+    if (!selectedMonth) return factures;
+    return factures.filter((f) => getMonthKey(f.dateValidationAMO) === selectedMonth);
+  }, [factures, selectedMonth]);
 
   const totalHT  = filtered.reduce((s, f) => s + f.montantHT, 0);
   const totalTTC = filtered.reduce((s, f) => s + f.montantTTC, 0);
+
+  if (factures.length === 0) return null;
 
   return (
     <div className="rom-card overflow-hidden mb-8">
@@ -285,21 +288,18 @@ export function BordereauClient({ facturesMois }: { facturesMois: FactureMois[] 
           <h2 className="text-sm font-bold text-rom-600 uppercase tracking-wider">
             Bordereau de paiement
           </h2>
-          {monthKeys.length > 1 && (
+          {monthKeys.length > 1 ? (
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="border border-rom-200 rounded-lg text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-rom-500 bg-white text-rom-700 font-medium"
             >
               {monthKeys.map((k) => (
-                <option key={k} value={k}>
-                  {monthKeyToLabel(k)}
-                </option>
+                <option key={k} value={k}>{monthKeyToLabel(k)}</option>
               ))}
             </select>
-          )}
-          {monthKeys.length === 1 && (
-            <span className="text-sm text-rom-700 font-medium">{monthKeyToLabel(monthKeys[0])}</span>
+          ) : (
+            <span className="text-sm text-rom-700 font-medium">{monthKeyToLabel(monthKeys[0] ?? '')}</span>
           )}
         </div>
         {filtered.length > 0 && (
@@ -309,50 +309,47 @@ export function BordereauClient({ facturesMois }: { facturesMois: FactureMois[] 
         )}
       </div>
 
-      {facturesMois.length === 0 ? (
-        <div className="p-8 text-center text-gray-400 text-sm">Aucune donnée de bordereau disponible</div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="p-8 text-center text-gray-400 text-sm">Aucune facture pour cette période</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="rom-table">
             <thead>
               <tr>
-                <th>Facture / Situation</th>
+                <th>Date facture</th>
+                <th>N° Facture / Situation</th>
                 <th>Société</th>
-                <th>Date validation</th>
-                <th className="text-right">HT</th>
-                <th className="text-right">TVA</th>
-                <th className="text-right">TTC</th>
-                <th className="text-right">% Commande</th>
+                <th>Date validation AMO</th>
+                <th className="text-right">Montant HT</th>
+                <th className="text-right">Montant TTC</th>
+                <th className="text-right">Retenue</th>
                 <th className="text-right">% Avancement</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((f, i) => (
                 <tr key={i}>
+                  <td className="text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
                   <td className="font-medium">{f.factureOuSituation}</td>
                   <td>{f.societe}</td>
-                  <td className="text-gray-500">{f.dateValidation}</td>
+                  <td className="text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
                   <td className="text-right">{fmt(f.montantHT)}</td>
-                  <td className="text-right text-gray-500">{fmt(f.tva)}</td>
                   <td className="text-right font-bold text-rom-600">{fmt(f.montantTTC)}</td>
-                  <td className="text-right">
-                    <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
-                      {f.pourcentageFactureSurCommande}%
-                    </span>
+                  <td className="text-right text-xs text-gray-500">
+                    {f.retenueGarantie > 0 ? fmt(f.retenueGarantie) : '—'}
                   </td>
                   <td className="text-right">
-                    <span className="text-xs font-bold text-gray-700">{f.pourcentageAvancementTotal}%</span>
+                    <span className={`text-xs font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                      {f.pourcentageAvancementTotal}%
+                    </span>
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="bg-rom-600 text-white font-bold">
-                <td colSpan={3} className="px-4 py-3 text-sm">TOTAL DU BORDEREAU</td>
+                <td colSpan={4} className="px-4 py-3 text-sm">TOTAL ({filtered.length} factures)</td>
                 <td className="px-4 py-3 text-right text-sm">{fmt(totalHT)}</td>
-                <td />
                 <td className="px-4 py-3 text-right text-sm">{fmt(totalTTC)}</td>
                 <td colSpan={2} />
               </tr>

@@ -66,8 +66,8 @@ export default async function ProjetPage({ params }: PageProps) {
         <StatCard label="Commandes"          value={`${rapport.nombreCommandesActives} actives`}      sub={`${rapport.nombreTotalCommandes} total · ${rapport.nombreTotalAvenants} avenants`} icon={Hash} accent="bg-violet-600" />
       </div>
 
-      {/* Bordereau de paiement — first section */}
-      <BordereauClient facturesMois={rapport.facturesMois} />
+      {/* Bordereau de paiement — first section, filtered by dateValidationAMO */}
+      <BordereauClient factures={rapport.factures} />
 
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
@@ -191,18 +191,61 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Budget prévisionnel */}
-      {rapport.budget && rapport.budget.length > 0 && (
+      {rapport.budget && rapport.budget.lignes.length > 0 && (
         <div className="rom-card overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
+            {rapport.budget.titre && !/^budget$/i.test(rapport.budget.titre) && (
+              <span className="text-xs text-gray-500 italic">{rapport.budget.titre}</span>
+            )}
           </div>
-          <div className="p-5 space-y-1 text-sm">
-            {rapport.budget.map((b, i) => (
-              <div key={i} className="flex justify-between py-1.5 border-b border-slate-50 last:border-0">
-                <span className="text-gray-600">{b.libelle}</span>
-                <span className="font-semibold tabular-nums">{formatMontantHT(b.montantHT)}</span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-4 py-2 text-left font-semibold text-gray-600 min-w-[180px]">Libellé</th>
+                  {rapport.budget.colonnes.map((col, i) => (
+                    <th key={i} className="px-4 py-2 text-right font-semibold text-gray-600 whitespace-nowrap">{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rapport.budget.lignes.map((ligne, i) => {
+                  if (ligne.type === 'section') {
+                    return (
+                      <tr key={i} className="bg-rom-50 border-t border-b border-rom-100">
+                        <td colSpan={(rapport.budget!.colonnes.length || 0) + 1}
+                          className="px-4 py-2 font-bold text-rom-700 uppercase tracking-wide text-[11px]">
+                          {ligne.libelle}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  if (ligne.type === 'total') {
+                    return (
+                      <tr key={i} className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
+                        <td className="px-4 py-2 text-gray-800">{ligne.libelle}</td>
+                        {ligne.valeurs.map((v, j) => (
+                          <td key={j} className="px-4 py-2 text-right tabular-nums text-gray-800">
+                            {v !== 0 ? formatMontantHT(v) : '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="px-4 py-2 text-gray-600">{ligne.libelle}</td>
+                      {ligne.valeurs.map((v, j) => (
+                        <td key={j} className="px-4 py-2 text-right tabular-nums text-gray-700">
+                          {v !== 0 ? formatMontantHT(v) : ''}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

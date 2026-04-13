@@ -105,9 +105,10 @@ async function processFolder(
     budget:       parsed.budget       ?? undefined,
   };
 
-  // Save: replace the entire rapports array with ONLY this rapport
+  // Save: keep only the latest rapport but ACCUMULATE the historic chart.
+  // Label format YYYY/MM (e.g. "2026/04") sorts correctly as a plain string.
   const existing = await getProjetById(id);
-  const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
+  const label = rapport.date.slice(0, 4) + '/' + rapport.date.slice(4, 6);
   const projet = existing ?? {
     id,
     shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
@@ -118,11 +119,29 @@ async function processFolder(
     historiqueChart: [],
   };
   projet.rapports = [rapport];
-  projet.historiqueChart = [{
-    date: label,
-    montantCommandesHT: rapport.montantTotalCommandesHT,
-    montantFacturesHT:  rapport.montantTotalFacturesHT,
-  }];
+
+  // Normalize old-format labels ("AVR/26") to YYYY/MM on the fly
+  const normalizeLabel = (l: string): string => {
+    if (/^\d{4}\/\d{2}$/.test(l)) return l;
+    const ABBR: Record<string, string> = {
+      JAN:'01', FEV:'02', FÉV:'02', MAR:'03', AVR:'04', MAI:'05',
+      JUN:'06', JUI:'06', JUL:'07', AOÛ:'08', AOU:'08',
+      SEP:'09', OCT:'10', NOV:'11', DEC:'12', DÉC:'12',
+    };
+    const m = l.match(/^([A-ZÀ-Ü]{3})\/(\d{2})$/i);
+    if (!m) return l;
+    const mm = ABBR[m[1].toUpperCase()];
+    if (!mm) return l;
+    const yy = parseInt(m[2]);
+    return `${yy < 70 ? 2000 + yy : 1900 + yy}/${mm}`;
+  };
+
+  const history = (projet.historiqueChart ?? []).map(h => ({ ...h, date: normalizeLabel(h.date) }));
+  const newPoint = { date: label, montantCommandesHT: rapport.montantTotalCommandesHT, montantFacturesHT: rapport.montantTotalFacturesHT };
+  const hIdx = history.findIndex(h => h.date === label);
+  if (hIdx >= 0) history[hIdx] = newPoint; else history.push(newPoint);
+  projet.historiqueChart = history.sort((a, b) => a.date.localeCompare(b.date));
+
   await saveProjet(projet);
 
   return {

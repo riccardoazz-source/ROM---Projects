@@ -1,3 +1,15 @@
+export interface BudgetLigne {
+  libelle: string;
+  type: 'section' | 'item' | 'total';
+  valeurs: number[];
+}
+
+export interface BudgetTable {
+  titre: string;
+  colonnes: string[];
+  lignes: BudgetLigne[];
+}
+
 export interface FactureMois {
   factureOuSituation: string;
   societe: string;
@@ -59,7 +71,7 @@ export interface RapportMensuel {
   commandes: Commande[];
   factures: Facture[];
   facturesMois: FactureMois[];
-  budget?: Array<{ libelle: string; montantHT: number }>;
+  budget?: BudgetTable;
 }
 
 export interface Projet {
