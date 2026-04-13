@@ -3,7 +3,7 @@
  * New route (replaces /api/sync which only created empty project shells).
  */
 import { NextResponse } from 'next/server';
-import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport, getProjetById } from '@/lib/data';
+import { getConfig, saveConfig, getProjetById, saveProjet } from '@/lib/data';
 import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
 import { supabase } from '@/lib/db';
 import { RapportMensuel } from '@/types';
@@ -70,6 +70,7 @@ export async function GET() {
 
     // 3. Process each folder
     let processed = 0, errors = 0;
+    const driveIds = new Set<string>(); // track which IDs we processed from Drive
 
     for (const folder of folders) {
       const { nom, client, id } = folderParts(folder.name);
@@ -143,16 +144,34 @@ export async function GET() {
           facturesMois: parsed.facturesMois ?? [],
         };
 
-        // Save
-        await createOrGetProjet(id, nom, client);
-        await addOrUpdateRapport(id, rapport);
+        // Save: replace the entire rapports array with ONLY this rapport
+        // (no accumulation — each sync replaces with the latest Drive data)
+        const existing = await getProjetById(id);
+        const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
+        const projet = existing ?? {
+          id,
+          shareToken: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+          nom,
+          client,
+          statut: 'en_cours' as const,
+          rapports: [],
+          historiqueChart: [],
+        };
+        // Replace rapports with single latest rapport
+        projet.rapports = [rapport];
+        projet.historiqueChart = [{
+          date: label,
+          montantCommandesHT: rapport.montantTotalCommandesHT,
+          montantFacturesHT:  rapport.montantTotalFacturesHT,
+        }];
+        await saveProjet(projet);
 
         // Read-back to verify persistence
         const saved = await getProjetById(id);
-        const savedR = saved?.rapports?.reduce((a: any, b: any) => (!a || b.date > a.date ? b : a), null);
-        const sCmds  = savedR?.commandes?.length  ?? 0;
-        const sFacts = savedR?.factures?.length   ?? 0;
+        const sCmds  = saved?.rapports?.[0]?.commandes?.length  ?? 0;
+        const sFacts = saved?.rapports?.[0]?.factures?.length   ?? 0;
 
+        driveIds.add(id);
         processed++;
         log.push(`[${folder.name}] OK — parsé: ${rapport.commandes.length} cmds, ${rapport.factures.length} facts → sauvegardé: ${sCmds} cmds, ${sFacts} facts (${mois})`);
 
@@ -162,7 +181,17 @@ export async function GET() {
       }
     }
 
-    // 4. Update lastSync
+    // 4. Remove projects from Supabase that no longer exist in Drive
+    try {
+      const { data: allRows } = await supabase.from('projets').select('id');
+      const toDelete = (allRows ?? []).map(r => r.id).filter(id => !driveIds.has(id));
+      if (toDelete.length > 0) {
+        await supabase.from('projets').delete().in('id', toDelete);
+        log.push(`Supprimé: ${toDelete.join(', ')}`);
+      }
+    } catch { /* noop */ }
+
+    // 5. Update lastSync
     try { await saveConfig({ ...config, lastSync: new Date().toISOString() }); } catch { /* noop */ }
 
     return NextResponse.json({
