@@ -3,8 +3,14 @@
 import { useState, useMemo } from 'react';
 import { Search, XCircle, CheckCircle } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
-import { formatMontantHT } from '@/lib/data';
 import { Commande, Facture } from '@/types';
+
+function fmt(v: number) {
+  const n = typeof v === 'number' && isFinite(v) ? v : 0;
+  const [int, dec] = n.toFixed(2).split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
+}
+const formatMontantHT = fmt;
 
 // ─── French month names ──────────────────────────────────────────────────────
 
