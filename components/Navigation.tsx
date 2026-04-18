@@ -39,7 +39,7 @@ export default function Navigation() {
   return (
     <>
       {/* ── Mobile top bar ───────────────────────────────────────────── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center px-3 gap-3 shadow-sm safe-top">
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 flex items-center px-3 gap-3 shadow-sm safe-top">
         <button
           onClick={() => setMobileOpen(o => !o)}
           className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
@@ -51,7 +51,7 @@ export default function Navigation() {
           <img
             src="/logo-ROM-grand-nouveau-acro.png"
             alt="ROM"
-            style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
           />
         </Link>
       </div>
@@ -79,7 +79,7 @@ export default function Navigation() {
           <img
             src="/logo-ROM-grand-nouveau-acro.png"
             alt="ROM – Roux Oeuvre Maîtrise"
-            style={{ height: '70px', width: 'auto', maxWidth: '200px', objectFit: 'contain' }}
+            style={{ height: '84px', width: 'auto', maxWidth: '200px', objectFit: 'contain' }}
           />
         </Link>
 

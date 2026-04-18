@@ -220,35 +220,57 @@ function parseValeurEntries(sectionText: string): Map<string, number> {
 
 /**
  * Parse LOT table: returns societe → ordered array of lots (one per occurrence).
- * Handles multiple entries per société (e.g. ZAFFARONI in both travaux and divers).
+ * PDF column order is LOT/Mission | Société | Montant HT, so when pdf-parse
+ * concatenates columns, the lot text appears BEFORE the société name in each line.
+ * We process line by line, finding (lot_text, société, amount) triplets.
  */
 function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<string, string[]> {
   const result = new Map<string, string[]>();
   if (!sectionText || knownSocietes.length === 0) return result;
   const sorted = [...knownSocietes].sort((a, b) => b.length - a.length);
+  const AMT_INLINE = /(?:[1-9]\d{0,2}|0)(?: \d{3})*,\d{2}/g;
 
-  for (const societe of sorted) {
+  const lines = sectionText.split('\n').map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    if (SKIP_LINE_RE.test(line)) continue;
+
+    // Within each line find all (lot, société, amount) triplets left-to-right
     let searchFrom = 0;
-    while (true) {
-      const idx = sectionText.indexOf(societe, searchFrom);
-      if (idx === -1) break;
+    let prevEnd = 0;
 
-      const after = sectionText.slice(idx + societe.length);
-      const amtMatch = after.match(/^\s*([\d][\d\s]*,\d{2})\s*/);
-      if (!amtMatch) { searchFrom = idx + societe.length; continue; }
-
-      const afterAmt = after.slice(amtMatch[0].length);
-      let minDist = afterAmt.length;
-      // Search for ANY société (including same one) to delimit the lot text
-      for (const other of sorted) {
-        const oi = afterAmt.indexOf(other);
-        if (oi !== -1 && oi < minDist) minDist = oi;
+    while (searchFrom < line.length) {
+      // Find the earliest société at or after searchFrom (longest wins on tie)
+      let bestIdx = -1;
+      let bestSociete = '';
+      for (const societe of sorted) {
+        const idx = line.indexOf(societe, searchFrom);
+        if (idx === -1) continue;
+        if (bestIdx === -1 || idx < bestIdx || (idx === bestIdx && societe.length > bestSociete.length)) {
+          bestIdx = idx;
+          bestSociete = societe;
+        }
       }
-      const lot = afterAmt.slice(0, minDist).trim().replace(/\s+/g, ' ');
-      if (!result.has(societe)) result.set(societe, []);
-      result.get(societe)!.push(lot);
+      if (bestIdx === -1) break;
 
-      searchFrom = idx + societe.length + amtMatch[0].length + minDist;
+      // Amount must follow the société name directly (with optional spaces)
+      const after = line.slice(bestIdx + bestSociete.length);
+      const amtMatch = after.match(/^\s*((?:[1-9]\d{0,2}|0)(?: \d{3})*,\d{2})/);
+      if (!amtMatch) {
+        searchFrom = bestIdx + bestSociete.length;
+        continue;
+      }
+
+      // Lot text = text between the previous amount end and this société start
+      const rawLot = line.slice(prevEnd, bestIdx)
+        .replace(AMT_INLINE, '')   // strip stray amounts (e.g. from a previous column)
+        .replace(/\s+/g, ' ').trim();
+
+      if (!result.has(bestSociete)) result.set(bestSociete, []);
+      result.get(bestSociete)!.push(rawLot);
+
+      prevEnd = bestIdx + bestSociete.length + amtMatch[0].length;
+      searchFrom = prevEnd;
     }
   }
   return result;

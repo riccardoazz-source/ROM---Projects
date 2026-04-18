@@ -4,15 +4,15 @@ import { useState } from 'react';
 import { Link2, Check } from 'lucide-react';
 
 interface CopyShareButtonProps {
-  projetId: string;
+  shareToken: string;
   projetNom: string;
 }
 
-export default function CopyShareButton({ projetId, projetNom }: CopyShareButtonProps) {
+export default function CopyShareButton({ shareToken, projetNom }: CopyShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
-    const url = `${window.location.origin}/projet/${projetId}`;
+    const url = `${window.location.origin}/partage/${shareToken}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);

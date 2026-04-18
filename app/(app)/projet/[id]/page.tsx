@@ -85,7 +85,7 @@ export default async function ProjetPage({ params }: PageProps) {
             <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
             <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
           </div>
-          <CopyShareButton projetId={projet.id} projetNom={projet.nom} />
+          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
         </div>
       </div>
 
@@ -101,14 +101,14 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Bordereau de paiement */}
-      <div id="bordereau" className="scroll-mt-28">
+      <div id="bordereau" className="scroll-mt-28 md:scroll-mt-14">
         <BordereauClient factures={rapport.factures} />
       </div>
 
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Récapitulatif dépenses */}
-        <div id="recap" className="rom-card overflow-hidden scroll-mt-28">
+        <div id="recap" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14">
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Récapitulatif des dépenses</h2>
           </div>
@@ -192,7 +192,7 @@ export default async function ProjetPage({ params }: PageProps) {
         {/* Graphiques */}
         <div className="xl:col-span-2 space-y-6">
           {/* Évolution */}
-          <div id="evolution" className="rom-card overflow-hidden scroll-mt-28">
+          <div id="evolution" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
                 Évolution — Total Commandes HT et Factures HT
@@ -221,7 +221,7 @@ export default async function ProjetPage({ params }: PageProps) {
 
       {/* Budget prévisionnel */}
       {hasBudget && (
-        <div id="budget" className="rom-card overflow-hidden mb-8 scroll-mt-28">
+        <div id="budget" className="rom-card overflow-hidden mb-8 scroll-mt-28 md:scroll-mt-14">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
             {rapport.budget!.titre && !/^budget$/i.test(rapport.budget!.titre) && (
@@ -280,7 +280,7 @@ export default async function ProjetPage({ params }: PageProps) {
       )}
 
       {/* % Avancement par société */}
-      <div id="avancement" className="rom-card overflow-hidden mb-8 scroll-mt-28">
+      <div id="avancement" className="rom-card overflow-hidden mb-8 scroll-mt-28 md:scroll-mt-14">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
             Tableau récapitulatif des commandes — % d&apos;avancement
@@ -309,12 +309,12 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Tableau des commandes LOTs */}
-      <div id="commandes" className="scroll-mt-28">
+      <div id="commandes" className="scroll-mt-28 md:scroll-mt-14">
         <CommandesTableClient commandes={rapport.commandes} />
       </div>
 
       {/* Liste des factures validées */}
-      <div id="factures" className="scroll-mt-28">
+      <div id="factures" className="scroll-mt-28 md:scroll-mt-14">
         <FacturesListClient factures={rapport.factures} />
       </div>
     </div>

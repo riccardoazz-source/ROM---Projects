@@ -53,7 +53,7 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
   return (
     <div
       ref={barRef}
-      className="sticky top-14 md:top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm
+      className="sticky top-16 md:top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm
                  -mx-3 sm:-mx-6 md:-mx-8 mb-8 overflow-x-auto scrollbar-none"
     >
       <div className="flex min-w-max px-1 sm:px-2">
