@@ -93,12 +93,12 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
             <tr>
               <th>Projet</th>
               <th className="hidden sm:table-cell">Client</th>
-              <th>Rapport</th>
-              <th className="text-right">Commandes HT</th>
+              <th className="hidden sm:table-cell">Rapport</th>
+              <th className="text-right hidden sm:table-cell">Commandes HT</th>
               <th className="text-right">Factures HT</th>
               <th className="text-right hidden md:table-cell">Cmd.</th>
               <th className="text-right hidden md:table-cell">Fact.</th>
-              <th style={{ width: 120 }}>Avancement</th>
+              <th className="whitespace-nowrap" style={{ width: 120 }}>Avancement</th>
             </tr>
           </thead>
           <tbody>
@@ -116,9 +116,9 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
                   </Link>
                 </td>
                 <td className="text-slate-500 font-medium hidden sm:table-cell">{r.client}</td>
-                <td className="text-slate-400 text-xs whitespace-nowrap">{r.mois}</td>
-                <td className="text-right font-semibold tabular-nums text-xs sm:text-sm">{fmt(r.commandesHT)}</td>
-                <td className="text-right font-semibold tabular-nums text-xs sm:text-sm">{fmt(r.facturesHT)}</td>
+                <td className="text-slate-400 text-xs whitespace-nowrap hidden sm:table-cell">{r.mois}</td>
+                <td className="text-right font-semibold tabular-nums text-xs whitespace-nowrap hidden sm:table-cell">{fmt(r.commandesHT)}</td>
+                <td className="text-right font-semibold tabular-nums text-xs whitespace-nowrap">{fmt(r.facturesHT)}</td>
                 <td className="text-right text-slate-500 hidden md:table-cell">{r.commandes}</td>
                 <td className="text-right text-slate-500 hidden md:table-cell">{r.factures}</td>
                 <td><ProgressBar value={r.avancement} size="sm" showLabel /></td>
@@ -131,9 +131,9 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
                 TOTAL · {filtered.length} projet{filtered.length > 1 ? 's' : ''}
               </td>
               <td className="sm:hidden">TOTAL · {filtered.length}</td>
-              <td />
-              <td className="text-right tabular-nums">{fmt(totalCmdHT)}</td>
-              <td className="text-right tabular-nums">{fmt(totalFactHT)}</td>
+              <td className="hidden sm:table-cell" />
+              <td className="text-right tabular-nums whitespace-nowrap hidden sm:table-cell">{fmt(totalCmdHT)}</td>
+              <td className="text-right tabular-nums whitespace-nowrap">{fmt(totalFactHT)}</td>
               <td className="text-right hidden md:table-cell">{totalCmd}</td>
               <td className="text-right hidden md:table-cell">{totalFact}</td>
               <td />

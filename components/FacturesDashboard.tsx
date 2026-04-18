@@ -121,9 +121,9 @@ export default function FacturesDashboard({ rows }: { rows: FactureDashRow[] }) 
                 <th className="hidden sm:table-cell">N° Facture</th>
                 <th className="hidden md:table-cell">Société</th>
                 <th className="hidden md:table-cell">Date fact.</th>
-                <th>Validation AMO</th>
-                <th className="text-right">Montant HT</th>
-                <th className="text-right">Montant TTC</th>
+                <th className="whitespace-nowrap">Validation AMO</th>
+                <th className="text-right whitespace-nowrap hidden sm:table-cell">Montant HT</th>
+                <th className="text-right whitespace-nowrap">Montant TTC</th>
               </tr>
             </thead>
             <tbody>
@@ -144,18 +144,21 @@ export default function FacturesDashboard({ rows }: { rows: FactureDashRow[] }) 
                   <td className="text-xs hidden md:table-cell">{r.societe}</td>
                   <td className="text-xs text-slate-400 hidden md:table-cell whitespace-nowrap">{r.dateFacture}</td>
                   <td className="text-xs text-slate-500 whitespace-nowrap">{r.dateValidationAMO}</td>
-                  <td className="text-right font-semibold tabular-nums text-xs">{fmt(r.montantHT)}</td>
-                  <td className="text-right font-bold tabular-nums text-xs text-rom-700">{fmt(r.montantTTC)}</td>
+                  <td className="text-right font-semibold tabular-nums text-xs whitespace-nowrap hidden sm:table-cell">{fmt(r.montantHT)}</td>
+                  <td className="text-right font-bold tabular-nums text-xs whitespace-nowrap text-rom-700">{fmt(r.montantTTC)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={5}>
+                <td colSpan={2}>
                   TOTAL · {filtered.length} facture{filtered.length > 1 ? 's' : ''}
                 </td>
-                <td className="text-right tabular-nums">{fmt(totalHT)}</td>
-                <td className="text-right tabular-nums">{fmt(totalTTC)}</td>
+                <td className="hidden md:table-cell" />
+                <td className="hidden md:table-cell" />
+                <td />
+                <td className="text-right tabular-nums whitespace-nowrap hidden sm:table-cell">{fmt(totalHT)}</td>
+                <td className="text-right tabular-nums whitespace-nowrap">{fmt(totalTTC)}</td>
               </tr>
             </tfoot>
           </table>

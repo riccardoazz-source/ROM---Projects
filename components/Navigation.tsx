@@ -36,17 +36,22 @@ export default function Navigation() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const close = () => setMobileOpen(false);
 
+  // On project pages: no hamburger, no mobile sidebar (clean for shared links)
+  const isProjetPage = pathname.startsWith('/projet/');
+
   return (
     <>
       {/* ── Mobile top bar ───────────────────────────────────────────── */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 flex items-center px-3 gap-3 shadow-sm safe-top">
-        <button
-          onClick={() => setMobileOpen(o => !o)}
-          className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
-          aria-label="Menu"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {!isProjetPage && (
+          <button
+            onClick={() => setMobileOpen(o => !o)}
+            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        )}
         <Link href="/" onClick={close}>
           <img
             src="/logo-ROM-grand-nouveau-acro.png"
@@ -57,7 +62,7 @@ export default function Navigation() {
       </div>
 
       {/* ── Backdrop (mobile) ─────────────────────────────────────────── */}
-      {mobileOpen && (
+      {mobileOpen && !isProjetPage && (
         <div
           className="md:hidden fixed inset-0 bg-black/30 z-40"
           onClick={close}
@@ -70,7 +75,7 @@ export default function Navigation() {
         'bg-white border-r border-slate-200 shadow-sm',
         'transition-transform duration-200 ease-in-out',
         'md:translate-x-0',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        (mobileOpen && !isProjetPage) ? 'translate-x-0' : '-translate-x-full',
       )}>
 
         {/* Logo */}

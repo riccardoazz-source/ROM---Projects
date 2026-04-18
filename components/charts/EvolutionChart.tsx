@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
@@ -91,9 +90,6 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
   const sorted = [...data].sort((a, b) => labelSortKey(a.date) - labelSortKey(b.date));
   const isSinglePoint = sorted.length === 1;
 
-  // Use the most recent commandes total as the budget reference line
-  const commandesRef = sorted[sorted.length - 1].montantCommandesHT;
-
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={sorted} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -115,22 +111,19 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
 
-        {/* Budget ceiling as a dashed reference line — not a data series */}
-        <ReferenceLine
-          y={commandesRef}
+        {/* Budget total (flat line — shows the ceiling) */}
+        <Line
+          type="monotone"
+          dataKey="montantCommandesHT"
+          name="Total Commandes HT"
           stroke="#1B3A5C"
-          strokeDasharray="6 3"
-          strokeWidth={1.5}
-          label={{
-            value: `Budget ${formatYAxis(commandesRef)}`,
-            position: 'insideTopRight',
-            fontSize: 10,
-            fill: '#1B3A5C',
-            dy: -6,
-          }}
+          strokeWidth={2}
+          strokeDasharray={isSinglePoint ? undefined : '6 3'}
+          dot={isSinglePoint ? { r: 6, fill: '#1B3A5C' } : false}
+          activeDot={{ r: 5 }}
         />
 
-        {/* Factures cumulées — the only trend line */}
+        {/* Factures cumulées */}
         <Line
           type="monotone"
           dataKey="montantFacturesHT"
