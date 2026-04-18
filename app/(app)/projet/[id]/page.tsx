@@ -45,7 +45,13 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
-  const hasBudget = !!(rapport.budget && rapport.budget.lignes.length > 0);
+  // Reject budget that was parsed from the factures section (a common parser false-positive)
+  const BUDGET_INVALID_RE = /facture|situation\s*n°|bordereau|validation\s*amo|% facture|avancement total/i;
+  const hasBudget = !!(
+    rapport.budget &&
+    rapport.budget.lignes.length > 0 &&
+    !rapport.budget.lignes.some(l => BUDGET_INVALID_RE.test(l.libelle))
+  );
 
   // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
   const chartData = projet.historiqueChart.length >= 2

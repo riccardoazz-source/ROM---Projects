@@ -43,14 +43,15 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
 
-    // Measure the actual fixed headers so we never guess wrong
-    const barH = barRef.current?.getBoundingClientRect().height ?? 44;
-    const isMobile = window.innerWidth < 768; // md breakpoint
-    const topbarH = isMobile ? 64 : 0;       // h-16 mobile top bar
-    const offset = topbarH + barH + 8;        // 8px breathing room
-
-    const y = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    // Defer measurement by one tick so layout is stable
+    setTimeout(() => {
+      const barH = barRef.current?.getBoundingClientRect().height ?? 44;
+      const isMobile = window.innerWidth < 768;
+      const topbarH = isMobile ? 64 : 0;
+      const offset = topbarH + barH + 16;
+      const y = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }, 0);
 
     setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
