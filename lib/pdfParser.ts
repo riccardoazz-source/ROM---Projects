@@ -525,15 +525,17 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return undefined;
 
-  // Guard: reject if this looks like a factures section rather than a real budget table.
-  // A budget table must have budget-specific column keywords, and must NOT have
-  // invoice date lines (DD/MM/YYYY) in the first 20 lines.
+  // Guard: reject if this looks like a factures/bordereau section.
+  // Strategy: count ALL lines containing a DD/MM/YYYY date pattern.
+  // A real budget table has ≤2 date references (e.g. the title "Budget - Mars 2026").
+  // A factures section has one date per invoice row → many date-containing lines.
   const BUDGET_KEYWORDS_RE = /engag[ée]|coûts futurs|reste à facturer|pr[ée]visionnel|al[ée]as|impr[ée]vus|pr[ée]vision|d[ée]penses pr[ée]v/i;
   const FACTURE_DATE_RE = /\d{2}\/\d{2}\/\d{4}/;
-  const earlyLines = lines.slice(0, Math.min(20, lines.length));
-  const hasFactureDates = earlyLines.some(l => FACTURE_DATE_RE.test(l));
-  const hasBudgetKeywords = BUDGET_KEYWORDS_RE.test(earlyLines.join(' '));
-  if (hasFactureDates || !hasBudgetKeywords) return undefined;
+  const dateLineCount = lines.filter(l => FACTURE_DATE_RE.test(l)).length;
+  if (dateLineCount > 2) return undefined;
+  // Budget keywords must appear in the first 40 lines (header / column labels area)
+  const checkLines = lines.slice(0, Math.min(40, lines.length));
+  if (!BUDGET_KEYWORDS_RE.test(checkLines.join(' '))) return undefined;
 
   const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement)\b/i;
   const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
@@ -750,11 +752,25 @@ export function parseRapportFromPdf(
   // We try multiple title variants: "Budget", "Budget prévisionnel", "BUDGET".
   function findBudgetRaw(searchText: string): string {
     const lo = searchText.toLowerCase();
-    // Match "budget" at start of a line (with optional dash/date after)
+    // Match "budget" at start of a line (with optional dash/date/prévisionnel after)
     const pos = lo.search(/(?:^|\n)budget(?:\s|$|\s*[-–]|\s*pr)/m);
     if (pos === -1) return '';
     const lineStart = searchText[pos] === '\n' ? pos + 1 : pos;
-    return searchText.slice(lineStart);
+    // Bound the section: stop at any following major section header so we don't
+    // accidentally pull in the Liste des factures or next page's content.
+    const rest = lo.slice(lineStart + 6);
+    const endPatterns = [
+      /\nliste des factures\b/,
+      /\nbordereau de (paiement|transmission)\b/,
+      /\ntableau récapitulatif\b/,
+      /\ndate facture\b/,
+    ];
+    let endOffset = rest.length;
+    for (const ep of endPatterns) {
+      const m = rest.search(ep);
+      if (m !== -1 && m < endOffset) endOffset = m;
+    }
+    return searchText.slice(lineStart, lineStart + 6 + endOffset);
   }
 
   const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');

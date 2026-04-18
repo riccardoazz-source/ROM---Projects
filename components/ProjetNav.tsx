@@ -42,8 +42,16 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     const el = document.getElementById(id);
     if (!el) return;
     setActive(id);
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Ensure the clicked tab scrolls into view in the horizontal nav bar
+
+    // Measure the actual fixed headers so we never guess wrong
+    const barH = barRef.current?.getBoundingClientRect().height ?? 44;
+    const isMobile = window.innerWidth < 768; // md breakpoint
+    const topbarH = isMobile ? 64 : 0;       // h-16 mobile top bar
+    const offset = topbarH + barH + 8;        // 8px breathing room
+
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+
     setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
