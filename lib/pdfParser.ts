@@ -503,6 +503,16 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return undefined;
 
+  // Guard: reject if this looks like a factures section rather than a real budget table.
+  // A budget table must have budget-specific column keywords, and must NOT have
+  // invoice date lines (DD/MM/YYYY) in the first 20 lines.
+  const BUDGET_KEYWORDS_RE = /engag[ée]|coûts futurs|reste à facturer|pr[ée]visionnel|al[ée]as|impr[ée]vus|pr[ée]vision|d[ée]penses pr[ée]v/i;
+  const FACTURE_DATE_RE = /\d{2}\/\d{2}\/\d{4}/;
+  const earlyLines = lines.slice(0, Math.min(20, lines.length));
+  const hasFactureDates = earlyLines.some(l => FACTURE_DATE_RE.test(l));
+  const hasBudgetKeywords = BUDGET_KEYWORDS_RE.test(earlyLines.join(' '));
+  if (hasFactureDates || !hasBudgetKeywords) return undefined;
+
   const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement)\b/i;
   const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
   // Extended amount pattern: also matches integers with space-separated thousands (no decimal)

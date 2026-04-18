@@ -10,11 +10,29 @@ import AvancementBarChart from '@/components/charts/AvancementBarChart';
 import ProjetNav from '@/components/ProjetNav';
 import { ChevronRight, Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
+import type { Facture, HistoriquePoint } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { id: string };
+}
+
+// Build chart history from facture validation dates when we don't have enough sync history
+function buildChartFromFactures(factures: Facture[], commandesHT: number): HistoriquePoint[] {
+  const byMonth = new Map<string, number>();
+  for (const f of factures) {
+    const d = f.dateValidationAMO;
+    if (!d || d.length < 10) continue;
+    const key = `${d.slice(6, 10)}/${d.slice(3, 5)}`; // YYYY/MM from DD/MM/YYYY
+    byMonth.set(key, (byMonth.get(key) ?? 0) + f.montantHT);
+  }
+  const months = Array.from(byMonth.keys()).sort();
+  let cumulative = 0;
+  return months.map(date => {
+    cumulative += byMonth.get(date)!;
+    return { date, montantCommandesHT: commandesHT, montantFacturesHT: cumulative };
+  });
 }
 
 export default async function ProjetPage({ params }: PageProps) {
@@ -29,6 +47,11 @@ export default async function ProjetPage({ params }: PageProps) {
     : 0;
 
   const hasBudget = !!(rapport.budget && rapport.budget.lignes.length > 0);
+
+  // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
+  const chartData = projet.historiqueChart.length >= 2
+    ? projet.historiqueChart
+    : buildChartFromFactures(rapport.factures, rapport.montantTotalCommandesHT);
 
   const navSections = [
     { id: 'bordereau', label: 'Bordereau' },
@@ -78,14 +101,14 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Bordereau de paiement */}
-      <div id="bordereau">
+      <div id="bordereau" className="scroll-mt-28">
         <BordereauClient factures={rapport.factures} />
       </div>
 
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Récapitulatif dépenses */}
-        <div id="recap" className="rom-card overflow-hidden">
+        <div id="recap" className="rom-card overflow-hidden scroll-mt-28">
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Récapitulatif des dépenses</h2>
           </div>
@@ -169,14 +192,14 @@ export default async function ProjetPage({ params }: PageProps) {
         {/* Graphiques */}
         <div className="xl:col-span-2 space-y-6">
           {/* Évolution */}
-          <div id="evolution" className="rom-card overflow-hidden">
+          <div id="evolution" className="rom-card overflow-hidden scroll-mt-28">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
                 Évolution — Total Commandes HT et Factures HT
               </h2>
             </div>
             <div className="p-5">
-              <EvolutionChart data={projet.historiqueChart} />
+              <EvolutionChart data={chartData} />
             </div>
           </div>
 
@@ -198,7 +221,7 @@ export default async function ProjetPage({ params }: PageProps) {
 
       {/* Budget prévisionnel */}
       {hasBudget && (
-        <div id="budget" className="rom-card overflow-hidden mb-8">
+        <div id="budget" className="rom-card overflow-hidden mb-8 scroll-mt-28">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
             {rapport.budget!.titre && !/^budget$/i.test(rapport.budget!.titre) && (
@@ -257,7 +280,7 @@ export default async function ProjetPage({ params }: PageProps) {
       )}
 
       {/* % Avancement par société */}
-      <div id="avancement" className="rom-card overflow-hidden mb-8">
+      <div id="avancement" className="rom-card overflow-hidden mb-8 scroll-mt-28">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
             Tableau récapitulatif des commandes — % d&apos;avancement
@@ -286,12 +309,12 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Tableau des commandes LOTs */}
-      <div id="commandes">
+      <div id="commandes" className="scroll-mt-28">
         <CommandesTableClient commandes={rapport.commandes} />
       </div>
 
       {/* Liste des factures validées */}
-      <div id="factures">
+      <div id="factures" className="scroll-mt-28">
         <FacturesListClient factures={rapport.factures} />
       </div>
     </div>

@@ -210,7 +210,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
                   <td className="text-right font-medium">{formatMontantHT(f.montantHT)}</td>
                   <td className="text-right font-bold text-rom-600">{formatMontantHT(f.montantTTC)}</td>
                   <td className="text-right text-xs">
-                    {f.retenueGarantie > 0 ? formatMontantHT(f.retenueGarantie) : '—'}
+                    {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
                   </td>
                   <td className="text-right text-xs font-medium">{f.pourcentageFactureSurCommande}%</td>
                   <td className="text-right">
@@ -336,7 +336,7 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
                   <td className="text-right">{fmt(f.montantHT)}</td>
                   <td className="text-right font-bold text-rom-600">{fmt(f.montantTTC)}</td>
                   <td className="text-right text-xs text-gray-500">
-                    {f.retenueGarantie > 0 ? fmt(f.retenueGarantie) : '—'}
+                    {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
                   </td>
                   <td className="text-right">
                     <span className={`text-xs font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>

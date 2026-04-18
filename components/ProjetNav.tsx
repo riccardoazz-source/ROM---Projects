@@ -29,7 +29,7 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
           }
           if (bestId) setActive(bestId);
         },
-        { threshold: [0, 0.1, 0.25, 0.5], rootMargin: '-80px 0px -40% 0px' }
+        { threshold: [0, 0.05, 0.2], rootMargin: '-100px 0px -50% 0px' }
       );
       obs.observe(el);
       observers.push(obs);
@@ -41,22 +41,22 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const offset = 120;
-    const top = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top, behavior: 'smooth' });
+    setActive(id);
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Ensure the clicked tab scrolls into view in the horizontal nav bar
     setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
-    }, 50);
+    }, 100);
   };
 
   return (
     <div
       ref={barRef}
       className="sticky top-14 md:top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm
-                 -mx-3 sm:-mx-6 md:-mx-8 px-1 sm:px-2 mb-8 overflow-x-auto scrollbar-none"
+                 -mx-3 sm:-mx-6 md:-mx-8 mb-8 overflow-x-auto scrollbar-none"
     >
-      <div className="flex min-w-max">
+      <div className="flex min-w-max px-1 sm:px-2">
         {sections.map(s => (
           <button
             key={s.id}
