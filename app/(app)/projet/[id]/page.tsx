@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { getProjetById, getDernierRapport, formatMontantHT } from '@/lib/data';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
@@ -8,7 +7,7 @@ import EvolutionChart from '@/components/charts/EvolutionChart';
 import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
 import ProjetNav from '@/components/ProjetNav';
-import { ChevronRight, Euro, Hash, FileText, TrendingUp } from 'lucide-react';
+import { Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
 import type { Facture, HistoriquePoint } from '@/types';
 
@@ -65,15 +64,6 @@ export default async function ProjetPage({ params }: PageProps) {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 min-w-0">
-        <Link href="/" className="hover:text-rom-600 transition-colors flex-shrink-0">Tableau de bord</Link>
-        <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
-        <Link href="/projets" className="hover:text-rom-600 transition-colors flex-shrink-0 hidden sm:inline">Projets</Link>
-        <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 hidden sm:inline" />
-        <span className="text-gray-900 font-medium truncate">{projet.nom}</span>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div className="min-w-0">
@@ -85,7 +75,7 @@ export default async function ProjetPage({ params }: PageProps) {
             <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
             <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
           </div>
-          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
+          <CopyShareButton projetId={projet.id} projetNom={projet.nom} />
         </div>
       </div>
 

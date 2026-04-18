@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
@@ -22,7 +23,6 @@ const formatYAxis = (value: number) => {
   return `${value}€`;
 };
 
-// Converts any label format to a numeric sort key (YYYYMM as integer)
 const FR_MONTH_IDX: Record<string, number> = {
   JAN: 1, FEV: 2, FÉV: 2, MAR: 3, AVR: 4, MAI: 5,
   JUN: 6, JUI: 6, JUL: 7, AOÛ: 8, AOU: 8,
@@ -30,14 +30,11 @@ const FR_MONTH_IDX: Record<string, number> = {
 };
 
 function labelSortKey(label: string): number {
-  // Current format: YYYY/MM (e.g. "2026/04")
   if (/^\d{4}\/\d{2}$/.test(label)) {
     const [yyyy, mm] = label.split('/');
     return parseInt(yyyy, 10) * 100 + parseInt(mm, 10);
   }
-  // Legacy: YYYYMM (6 digits, no slash)
   if (/^\d{6}$/.test(label)) return parseInt(label, 10);
-  // Old: "AVR/26"
   const m = label.match(/^([A-ZÀ-Ü]{3})\/(\d{2})$/i);
   if (m) {
     const mm = FR_MONTH_IDX[m[1].toUpperCase()] ?? 0;
@@ -51,41 +48,35 @@ function labelSortKey(label: string): number {
 const MONTHS_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
 
 function formatLabel(label: string): string {
-  // Current format: YYYY/MM
   if (/^\d{4}\/\d{2}$/.test(label)) {
     const [yyyy, mm] = label.split('/');
     const idx = parseInt(mm, 10) - 1;
-    const y = yyyy.slice(2, 4);
-    return `${MONTHS_FR[idx] ?? '?'}.${y}`;
+    return `${MONTHS_FR[idx] ?? '?'}.${yyyy.slice(2, 4)}`;
   }
-  // Legacy: YYYYMM
   if (/^\d{6}$/.test(label)) {
     const idx = parseInt(label.slice(4, 6), 10) - 1;
-    const y = label.slice(2, 4);
-    return `${MONTHS_FR[idx] ?? '?'}.${y}`;
+    return `${MONTHS_FR[idx] ?? '?'}.${label.slice(2, 4)}`;
   }
-  // Old "AVR/26" — keep as-is
   return label;
 }
 
+const fmtEur = (v: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+
 const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg text-xs">
-        <p className="font-bold text-gray-700 mb-2">{formatLabel(label)}</p>
-        {payload.map((entry: any) => (
-          <div key={entry.name} className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-gray-600">{entry.name}:</span>
-            <span className="font-semibold">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(entry.value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return null;
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg text-xs">
+      <p className="font-bold text-gray-700 mb-2">{formatLabel(label)}</p>
+      {payload.map((entry: any) => (
+        <div key={entry.name} className="flex items-center gap-2 mb-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span className="text-gray-600">{entry.name}:</span>
+          <span className="font-semibold">{fmtEur(entry.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
 };
 
 export default function EvolutionChart({ data }: EvolutionChartProps) {
@@ -99,6 +90,9 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
 
   const sorted = [...data].sort((a, b) => labelSortKey(a.date) - labelSortKey(b.date));
   const isSinglePoint = sorted.length === 1;
+
+  // Use the most recent commandes total as the budget reference line
+  const commandesRef = sorted[sorted.length - 1].montantCommandesHT;
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -120,19 +114,27 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-        <Line
-          type="monotone"
-          dataKey="montantCommandesHT"
-          name="Montant HT Commandes"
+
+        {/* Budget ceiling as a dashed reference line — not a data series */}
+        <ReferenceLine
+          y={commandesRef}
           stroke="#1B3A5C"
-          strokeWidth={2.5}
-          dot={{ r: isSinglePoint ? 6 : 3, fill: '#1B3A5C' }}
-          activeDot={{ r: 7 }}
+          strokeDasharray="6 3"
+          strokeWidth={1.5}
+          label={{
+            value: `Budget ${formatYAxis(commandesRef)}`,
+            position: 'insideTopRight',
+            fontSize: 10,
+            fill: '#1B3A5C',
+            dy: -6,
+          }}
         />
+
+        {/* Factures cumulées — the only trend line */}
         <Line
           type="monotone"
           dataKey="montantFacturesHT"
-          name="Montant HT Factures"
+          name="Factures HT cumulées"
           stroke="#ED8936"
           strokeWidth={2.5}
           dot={{ r: isSinglePoint ? 6 : 3, fill: '#ED8936' }}
