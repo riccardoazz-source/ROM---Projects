@@ -113,3 +113,15 @@ body {
 /* ── Progress bar ── */
 .progress-track { @apply w-full h-2 bg-slate-200 rounded-full overflow-hidden; }
 .progress-bar   { @apply h-2 rounded-full transition-all duration-500; }
+
+/* ── Mobile / iOS ── */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* iOS safe area for notch/home bar */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-top { padding-top: env(safe-area-inset-top); }
+}
+
+/* Prevent font size inflation on iOS */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }

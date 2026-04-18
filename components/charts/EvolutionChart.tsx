@@ -30,9 +30,14 @@ const FR_MONTH_IDX: Record<string, number> = {
 };
 
 function labelSortKey(label: string): number {
-  // New format: YYYYMM
+  // Current format: YYYY/MM (e.g. "2026/04")
+  if (/^\d{4}\/\d{2}$/.test(label)) {
+    const [yyyy, mm] = label.split('/');
+    return parseInt(yyyy, 10) * 100 + parseInt(mm, 10);
+  }
+  // Legacy: YYYYMM (6 digits, no slash)
   if (/^\d{6}$/.test(label)) return parseInt(label, 10);
-  // Old format: "AVR/26"
+  // Old: "AVR/26"
   const m = label.match(/^([A-ZÀ-Ü]{3})\/(\d{2})$/i);
   if (m) {
     const mm = FR_MONTH_IDX[m[1].toUpperCase()] ?? 0;
@@ -46,13 +51,20 @@ function labelSortKey(label: string): number {
 const MONTHS_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
 
 function formatLabel(label: string): string {
-  // New YYYYMM format
-  if (/^\d{6}$/.test(label)) {
-    const m = parseInt(label.slice(4, 6), 10) - 1;
-    const y = label.slice(2, 4);
-    return `${MONTHS_FR[m] ?? '?'}.${y}`;
+  // Current format: YYYY/MM
+  if (/^\d{4}\/\d{2}$/.test(label)) {
+    const [yyyy, mm] = label.split('/');
+    const idx = parseInt(mm, 10) - 1;
+    const y = yyyy.slice(2, 4);
+    return `${MONTHS_FR[idx] ?? '?'}.${y}`;
   }
-  // Old "AVR/26" format — keep as-is
+  // Legacy: YYYYMM
+  if (/^\d{6}$/.test(label)) {
+    const idx = parseInt(label.slice(4, 6), 10) - 1;
+    const y = label.slice(2, 4);
+    return `${MONTHS_FR[idx] ?? '?'}.${y}`;
+  }
+  // Old "AVR/26" — keep as-is
   return label;
 }
 
@@ -86,6 +98,7 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
   }
 
   const sorted = [...data].sort((a, b) => labelSortKey(a.date) - labelSortKey(b.date));
+  const isSinglePoint = sorted.length === 1;
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -113,8 +126,8 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
           name="Montant HT Commandes"
           stroke="#1B3A5C"
           strokeWidth={2.5}
-          dot={{ r: 3, fill: '#1B3A5C' }}
-          activeDot={{ r: 5 }}
+          dot={{ r: isSinglePoint ? 6 : 3, fill: '#1B3A5C' }}
+          activeDot={{ r: 7 }}
         />
         <Line
           type="monotone"
@@ -122,8 +135,8 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
           name="Montant HT Factures"
           stroke="#ED8936"
           strokeWidth={2.5}
-          dot={{ r: 3, fill: '#ED8936' }}
-          activeDot={{ r: 5 }}
+          dot={{ r: isSinglePoint ? 6 : 3, fill: '#ED8936' }}
+          activeDot={{ r: 7 }}
         />
       </LineChart>
     </ResponsiveContainer>

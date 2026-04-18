@@ -104,11 +104,21 @@ function extractPercent(lines: string[], keyword: string): number {
   return 0;
 }
 
+// Normalize smart quotes and various apostrophe forms to plain ASCII
+function normalizeApos(s: string): string {
+  return s.replace(/[\u2018\u2019\u02BC\u0060]/g, "'");
+}
+
 function parseRecapTotals(text: string) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Normalize apostrophes so "d\u2019avenants" matches "d'avenants"
+  const lines = text.split('\n').map(l => normalizeApos(l.trim())).filter(Boolean);
   return {
-    nombreTotalCommandes: extractKVInt(lines, 'nombre total de commandes'),
-    nombreTotalAvenants: extractKVInt(lines, "nombre total d'avenants"),
+    nombreTotalCommandes: extractKVInt(lines, 'nombre total de commandes') || extractKVInt(lines, 'nb commandes'),
+    nombreTotalAvenants:
+      extractKVInt(lines, "nombre total d'avenants") ||
+      extractKVInt(lines, "nombre d'avenants") ||
+      extractKVInt(lines, 'nb avenants') ||
+      extractKVInt(lines, 'total avenants'),
     nombreCommandesActives: extractKVInt(lines, 'nombre de commandes actives'),
     nombreTotalFactures: extractKVInt(lines, 'nombre total factures'),
     montantTotalCommandesHT: extractKV(lines, 'montant total commandes (ht)') || extractKV(lines, 'montant total commandes'),
@@ -209,29 +219,37 @@ function parseValeurEntries(sectionText: string): Map<string, number> {
 }
 
 /**
- * Parse LOT table: returns societe → lot text.
- * Uses known société names as anchors to split société / amount / lot.
+ * Parse LOT table: returns societe → ordered array of lots (one per occurrence).
+ * Handles multiple entries per société (e.g. ZAFFARONI in both travaux and divers).
  */
-function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<string, string> {
-  const result = new Map<string, string>();
+function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<string, string[]> {
+  const result = new Map<string, string[]>();
   if (!sectionText || knownSocietes.length === 0) return result;
   const sorted = [...knownSocietes].sort((a, b) => b.length - a.length);
 
   for (const societe of sorted) {
-    const idx = sectionText.indexOf(societe);
-    if (idx === -1) continue;
-    const after = sectionText.slice(idx + societe.length);
-    const amtMatch = after.match(/^\s*([\d][\d\s]*,\d{2})\s*/);
-    if (!amtMatch) continue;
-    const afterAmt = after.slice(amtMatch[0].length);
-    let minDist = afterAmt.length;
-    for (const other of sorted) {
-      if (other === societe) continue;
-      const oi = afterAmt.indexOf(other);
-      if (oi !== -1 && oi < minDist) minDist = oi;
+    let searchFrom = 0;
+    while (true) {
+      const idx = sectionText.indexOf(societe, searchFrom);
+      if (idx === -1) break;
+
+      const after = sectionText.slice(idx + societe.length);
+      const amtMatch = after.match(/^\s*([\d][\d\s]*,\d{2})\s*/);
+      if (!amtMatch) { searchFrom = idx + societe.length; continue; }
+
+      const afterAmt = after.slice(amtMatch[0].length);
+      let minDist = afterAmt.length;
+      // Search for ANY société (including same one) to delimit the lot text
+      for (const other of sorted) {
+        const oi = afterAmt.indexOf(other);
+        if (oi !== -1 && oi < minDist) minDist = oi;
+      }
+      const lot = afterAmt.slice(0, minDist).trim().replace(/\s+/g, ' ');
+      if (!result.has(societe)) result.set(societe, []);
+      result.get(societe)!.push(lot);
+
+      searchFrom = idx + societe.length + amtMatch[0].length + minDist;
     }
-    const lot = afterAmt.slice(0, minDist).trim().replace(/\s+/g, ' ');
-    result.set(societe, lot);
   }
   return result;
 }
@@ -307,11 +325,14 @@ function mergeValeur(commandes: RawCommande[], valeurMap: Map<string, number>): 
   }
 }
 
-function mergeLot(commandes: RawCommande[], lotMap: Map<string, string>): void {
+function mergeLot(commandes: RawCommande[], lotMap: Map<string, string[]>): void {
+  const counters = new Map<string, number>();
   for (const c of commandes) {
-    if (lotMap.has(c.societe)) {
-      c.lot = lotMap.get(c.societe)!;
-    }
+    const lots = lotMap.get(c.societe);
+    if (!lots || lots.length === 0) continue;
+    const idx = counters.get(c.societe) ?? 0;
+    c.lot = lots[Math.min(idx, lots.length - 1)];
+    counters.set(c.societe, idx + 1);
   }
 }
 
@@ -482,17 +503,21 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return undefined;
 
-  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture)\b/i;
-  const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus)\b/i;
-  const AMT_RE_B = new RegExp(AMT, 'g');
+  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement)\b/i;
+  const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
+  // Extended amount pattern: also matches integers with space-separated thousands (no decimal)
+  const AMT_BUDGET = '(?:[1-9]\\d{0,2}|0)(?: \\d{3})*(?:,\\d{1,2})?';
+  const AMT_RE_B = new RegExp(AMT_BUDGET, 'g');
 
   function getAmounts(line: string): number[] {
     AMT_RE_B.lastIndex = 0;
     const amts: number[] = [];
     let m: RegExpExecArray | null;
     while ((m = AMT_RE_B.exec(line)) !== null) {
-      if (line[m.index + m[0].length] === '%') continue; // skip "7,00%"
-      amts.push(parseMontant(m[0]));
+      const after = line[m.index + m[0].length];
+      if (after === '%' || after === ',') continue; // skip percentages and decimal continuations
+      const val = parseMontant(m[0]);
+      if (val > 0) amts.push(val); // skip zeros (likely not real amounts)
     }
     return amts;
   }
@@ -618,7 +643,7 @@ export function parseRapportFromPdf(
 
   const lotMap = hasLotsSection
     ? parseLotEntries(lotsSection, knownSocietes)
-    : new Map<string, string>();
+    : new Map<string, string[]>();
 
   const classified = classifyByTotals(
     rawEntries,
@@ -688,12 +713,23 @@ export function parseRapportFromPdf(
   }
 
   // ── 5. Budget ────────────────────────────────────────────────────────────
-  // Budget appears after "Bordereau de paiement" in the PDF and can span
-  // multiple pages. We use parseBudgetTable() to extract the full table.
+  // Search for "Budget" section. Prefer the occurrence after "Bordereau de paiement"
+  // but fall back to the entire text so PDFs without a Bordereau still work.
+  // We try multiple title variants: "Budget", "Budget prévisionnel", "BUDGET".
+  function findBudgetRaw(searchText: string): string {
+    const lo = searchText.toLowerCase();
+    // Match "budget" at start of a line (with optional dash/date after)
+    const pos = lo.search(/(?:^|\n)budget(?:\s|$|\s*[-–]|\s*pr)/m);
+    if (pos === -1) return '';
+    const lineStart = searchText[pos] === '\n' ? pos + 1 : pos;
+    return searchText.slice(lineStart);
+  }
+
   const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');
   const afterBordereau = bpIdx !== -1 ? text.slice(bpIdx) : text;
-  const budgetPos = afterBordereau.toLowerCase().search(/\nbudget[\s\S]|^budget[\s\S]/);
-  const budgetRaw = budgetPos !== -1 ? afterBordereau.slice(budgetPos).replace(/^\n/, '') : '';
+  let budgetRaw = findBudgetRaw(afterBordereau);
+  // If not found after bordereau, search entire text as fallback
+  if (!budgetRaw) budgetRaw = findBudgetRaw(text);
   const budget = budgetRaw ? parseBudgetTable(budgetRaw) : undefined;
 
   return {

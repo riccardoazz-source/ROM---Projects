@@ -7,7 +7,8 @@ import CopyShareButton from '@/components/CopyShareButton';
 import EvolutionChart from '@/components/charts/EvolutionChart';
 import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
-import { ChevronRight, Euro, Hash, FileText, TrendingUp, ExternalLink } from 'lucide-react';
+import ProjetNav from '@/components/ProjetNav';
+import { ChevronRight, Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
 
 export const dynamic = 'force-dynamic';
@@ -27,10 +28,22 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
+  const hasBudget = !!(rapport.budget && rapport.budget.lignes.length > 0);
+
+  const navSections = [
+    { id: 'bordereau', label: 'Bordereau' },
+    { id: 'recap', label: 'Récapitulatif' },
+    { id: 'evolution', label: 'Évolution' },
+    ...(hasBudget ? [{ id: 'budget', label: 'Budget' }] : []),
+    { id: 'avancement', label: 'Avancement' },
+    { id: 'commandes', label: 'Commandes' },
+    { id: 'factures', label: 'Factures' },
+  ];
+
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 min-w-0">
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 min-w-0">
         <Link href="/" className="hover:text-rom-600 transition-colors flex-shrink-0">Tableau de bord</Link>
         <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
         <Link href="/projets" className="hover:text-rom-600 transition-colors flex-shrink-0 hidden sm:inline">Projets</Link>
@@ -39,40 +52,40 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{projet.nom}</h1>
           <p className="text-gray-500 mt-1 text-sm">{projet.client} · {projet.description}</p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="text-left sm:text-right">
             <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
             <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
           </div>
-          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
-          <a href={`/partage/${projet.shareToken}`} target="_blank" rel="noopener noreferrer"
-            title="Ouvrir la vue partagée"
-            className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-rom-600 hover:border-rom-300 transition-colors">
-            <ExternalLink className="w-4 h-4" />
-          </a>
+          <CopyShareButton projetId={projet.id} projetNom={projet.nom} />
         </div>
       </div>
 
+      {/* Sticky section tabs */}
+      <ProjetNav sections={navSections} />
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <StatCard label="Total Commandes HT" value={formatMontantHT(rapport.montantTotalCommandesHT)} sub={`TTC : ${formatMontantHT(rapport.montantTotalCommandesTTC)}`} icon={Euro} />
         <StatCard label="Total Factures HT"  value={formatMontantHT(rapport.montantTotalFacturesHT)}  sub={`TTC : ${formatMontantHT(rapport.montantTotalFacturesTTC)}`}  icon={FileText}  accent="bg-orange-500" />
-        <StatCard label="Avancement total"   value={`${rapport.pourcentageAvancementTotal}%`}         sub={`Ce mois : ${rapport.pourcentageAvancementMois}%`}              icon={TrendingUp} accent="bg-emerald-600" />
+        <StatCard label="Avancement total"   value={`${rapport.pourcentageAvancementTotal}%`}         sub={`Facturation : ${pctFacturation}%`} icon={TrendingUp} accent="bg-emerald-600" />
         <StatCard label="Commandes"          value={`${rapport.nombreCommandesActives} actives`}      sub={`${rapport.nombreTotalCommandes} total · ${rapport.nombreTotalAvenants} avenants`} icon={Hash} accent="bg-violet-600" />
       </div>
 
-      {/* Bordereau de paiement — first section, filtered by dateValidationAMO */}
-      <BordereauClient factures={rapport.factures} />
+      {/* Bordereau de paiement */}
+      <div id="bordereau">
+        <BordereauClient factures={rapport.factures} />
+      </div>
 
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Récapitulatif dépenses */}
-        <div className="rom-card overflow-hidden">
+        <div id="recap" className="rom-card overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Récapitulatif des dépenses</h2>
           </div>
@@ -136,13 +149,6 @@ export default async function ProjetPage({ params }: PageProps) {
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-gray-600">Ce mois ({rapport.mois})</span>
-                    <span className="font-bold">{rapport.pourcentageAvancementMois}%</span>
-                  </div>
-                  <ProgressBar value={rapport.pourcentageAvancementMois} size="md" />
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-gray-600">Avancement total</span>
                     <span className="font-bold text-rom-600">{rapport.pourcentageAvancementTotal}%</span>
                   </div>
@@ -163,7 +169,7 @@ export default async function ProjetPage({ params }: PageProps) {
         {/* Graphiques */}
         <div className="xl:col-span-2 space-y-6">
           {/* Évolution */}
-          <div className="rom-card overflow-hidden">
+          <div id="evolution" className="rom-card overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
                 Évolution — Total Commandes HT et Factures HT
@@ -191,12 +197,12 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Budget prévisionnel */}
-      {rapport.budget && rapport.budget.lignes.length > 0 && (
-        <div className="rom-card overflow-hidden mb-8">
+      {hasBudget && (
+        <div id="budget" className="rom-card overflow-hidden mb-8">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
-            {rapport.budget.titre && !/^budget$/i.test(rapport.budget.titre) && (
-              <span className="text-xs text-gray-500 italic">{rapport.budget.titre}</span>
+            {rapport.budget!.titre && !/^budget$/i.test(rapport.budget!.titre) && (
+              <span className="text-xs text-gray-500 italic">{rapport.budget!.titre}</span>
             )}
           </div>
           <div className="overflow-x-auto">
@@ -204,13 +210,13 @@ export default async function ProjetPage({ params }: PageProps) {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-2 text-left font-semibold text-gray-600 min-w-[180px]">Libellé</th>
-                  {rapport.budget.colonnes.map((col, i) => (
+                  {rapport.budget!.colonnes.map((col, i) => (
                     <th key={i} className="px-4 py-2 text-right font-semibold text-gray-600 whitespace-nowrap">{col}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {rapport.budget.lignes.map((ligne, i) => {
+                {rapport.budget!.lignes.map((ligne, i) => {
                   if (ligne.type === 'section') {
                     return (
                       <tr key={i} className="bg-rom-50 border-t border-b border-rom-100">
@@ -251,13 +257,13 @@ export default async function ProjetPage({ params }: PageProps) {
       )}
 
       {/* % Avancement par société */}
-      <div className="rom-card overflow-hidden mb-8">
+      <div id="avancement" className="rom-card overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-            Tableau récapitulatif des commandes — % d'avancement
+            Tableau récapitulatif des commandes — % d&apos;avancement
           </h2>
         </div>
-        <div className="p-6 grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
           <div>
             <h3 className="text-xs font-bold text-rom-600 uppercase tracking-wider mb-4 border-b border-blue-100 pb-2">
               Honoraires
@@ -279,13 +285,15 @@ export default async function ProjetPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Tableau des commandes LOTs — interactive client component */}
-      <CommandesTableClient commandes={rapport.commandes} />
+      {/* Tableau des commandes LOTs */}
+      <div id="commandes">
+        <CommandesTableClient commandes={rapport.commandes} />
+      </div>
 
-      {/* Liste des factures validées — interactive client component */}
-      <FacturesListClient factures={rapport.factures} />
-
-      {/* Bordereau de paiement is shown at the top, not duplicated here */}
+      {/* Liste des factures validées */}
+      <div id="factures">
+        <FacturesListClient factures={rapport.factures} />
+      </div>
     </div>
   );
 }

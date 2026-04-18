@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, X } from 'lucide-react';
+import { Search, X, Calendar } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
 
 function fmt(v: number) {
@@ -25,12 +25,20 @@ export interface DashboardRow {
 
 export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
   const [search, setSearch] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
 
-  const filtered = rows.filter(r => {
+  // Extract unique months sorted desc
+  const months = useMemo(() => {
+    const set = new Set(rows.map(r => r.mois));
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [rows]);
+
+  const filtered = useMemo(() => rows.filter(r => {
+    if (selectedMonth && r.mois !== selectedMonth) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return r.nom.toLowerCase().includes(q) || r.client.toLowerCase().includes(q);
-  });
+  }), [rows, search, selectedMonth]);
 
   const totalCmdHT  = filtered.reduce((s, r) => s + r.commandesHT, 0);
   const totalFactHT = filtered.reduce((s, r) => s + r.facturesHT, 0);
@@ -39,25 +47,43 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
 
   return (
     <div className="card overflow-hidden">
-      {/* Header + filter */}
-      <div className="section-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 sm:pr-4">
-        <span>Récapitulatif financier — tous projets</span>
-        <div className="relative flex-shrink-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Filtrer projet / client…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8 pr-7 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg
-                       text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 w-full sm:w-48"
-          />
-          {search && (
-            <button onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
-              <X className="w-3 h-3" />
-            </button>
-          )}
+      {/* Header + filters */}
+      <div className="section-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 sm:pr-4">
+        <span className="shrink-0">Récapitulatif financier — tous projets</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Month filter */}
+          <div className="relative">
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg
+                         text-white focus:outline-none focus:bg-white/20 appearance-none w-36"
+            >
+              <option value="">Tous les mois</option>
+              {months.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          {/* Text search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Filtrer…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-8 pr-7 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg
+                         text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 w-36"
+            />
+            {search && (
+              <button onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -66,20 +92,20 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
           <thead>
             <tr>
               <th>Projet</th>
-              <th>Client</th>
-              <th>Date rapport</th>
+              <th className="hidden sm:table-cell">Client</th>
+              <th>Rapport</th>
               <th className="text-right">Commandes HT</th>
               <th className="text-right">Factures HT</th>
-              <th className="text-right">Cmd.</th>
-              <th className="text-right">Fact.</th>
-              <th style={{ width: 140 }}>Avancement</th>
+              <th className="text-right hidden md:table-cell">Cmd.</th>
+              <th className="text-right hidden md:table-cell">Fact.</th>
+              <th style={{ width: 120 }}>Avancement</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center text-slate-400 py-8">
-                  Aucun projet correspond à &laquo; {search} &raquo;
+                  Aucun projet correspondant
                 </td>
               </tr>
             ) : filtered.map((r) => (
@@ -89,25 +115,27 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
                     {r.nom}
                   </Link>
                 </td>
-                <td className="text-slate-500 font-medium">{r.client}</td>
-                <td className="text-slate-400">{r.mois}</td>
-                <td className="text-right font-semibold tabular-nums">{fmt(r.commandesHT)}</td>
-                <td className="text-right font-semibold tabular-nums">{fmt(r.facturesHT)}</td>
-                <td className="text-right text-slate-500">{r.commandes}</td>
-                <td className="text-right text-slate-500">{r.factures}</td>
+                <td className="text-slate-500 font-medium hidden sm:table-cell">{r.client}</td>
+                <td className="text-slate-400 text-xs whitespace-nowrap">{r.mois}</td>
+                <td className="text-right font-semibold tabular-nums text-xs sm:text-sm">{fmt(r.commandesHT)}</td>
+                <td className="text-right font-semibold tabular-nums text-xs sm:text-sm">{fmt(r.facturesHT)}</td>
+                <td className="text-right text-slate-500 hidden md:table-cell">{r.commandes}</td>
+                <td className="text-right text-slate-500 hidden md:table-cell">{r.factures}</td>
                 <td><ProgressBar value={r.avancement} size="sm" showLabel /></td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3}>
-                TOTAL CONSOLIDÉ · {filtered.length} projet{filtered.length > 1 ? 's' : ''}
+              <td colSpan={2} className="hidden sm:table-cell">
+                TOTAL · {filtered.length} projet{filtered.length > 1 ? 's' : ''}
               </td>
+              <td className="sm:hidden">TOTAL · {filtered.length}</td>
+              <td />
               <td className="text-right tabular-nums">{fmt(totalCmdHT)}</td>
               <td className="text-right tabular-nums">{fmt(totalFactHT)}</td>
-              <td className="text-right">{totalCmd}</td>
-              <td className="text-right">{totalFact}</td>
+              <td className="text-right hidden md:table-cell">{totalCmd}</td>
+              <td className="text-right hidden md:table-cell">{totalFact}</td>
               <td />
             </tr>
           </tfoot>
