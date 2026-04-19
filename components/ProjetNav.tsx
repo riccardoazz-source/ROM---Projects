@@ -35,17 +35,10 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
     manualRef.current = true;
-
-    requestAnimationFrame(() => {
-      const navBottom = (barRef.current?.getBoundingClientRect().bottom ?? 100) + 12;
-      const y = el.getBoundingClientRect().top + window.scrollY - navBottom;
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-
-      const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
-      btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
-    });
-
-    // Re-enable scroll detection after smooth scroll finishes
+    // scrollIntoView respects scroll-margin-top (scroll-mt-28 = 98px ≈ nav height)
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
+    btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
     setTimeout(() => { manualRef.current = false; }, 800);
   };
 

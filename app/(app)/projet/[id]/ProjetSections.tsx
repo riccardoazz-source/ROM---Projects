@@ -37,19 +37,19 @@ function CommandesSubSection({ commandes, type, label }: {
           <thead>
             <tr>
               <th>Société</th>
-              <th>LOT / Mission</th>
-              <th className="text-right">Montant HT</th>
-              <th className="text-right">Valeur restante</th>
-              <th style={{ width: 200 }}>% Avancement</th>
+              <th className="hidden sm:table-cell">LOT / Mission</th>
+              <th className="text-right whitespace-nowrap">Montant HT</th>
+              <th className="text-right whitespace-nowrap hidden sm:table-cell">Valeur restante</th>
+              <th style={{ width: 140 }}>% Avanc.</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((c, i) => (
               <tr key={i}>
-                <td className="font-medium text-gray-900">{c.societe}</td>
-                <td className="text-gray-500">{c.lot}</td>
-                <td className="text-right font-medium">{formatMontantHT(c.montantHT)}</td>
-                <td className="text-right">
+                <td className="font-medium text-gray-900 text-xs">{c.societe}</td>
+                <td className="text-gray-500 hidden sm:table-cell">{c.lot}</td>
+                <td className="text-right font-medium whitespace-nowrap">{formatMontantHT(c.montantHT)}</td>
+                <td className="text-right hidden sm:table-cell">
                   <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-medium'}>
                     {formatMontantHT(c.valeurHtRestante)}
                   </span>
@@ -66,11 +66,12 @@ function CommandesSubSection({ commandes, type, label }: {
           </tbody>
           <tfoot>
             <tr className="bg-gray-50 font-semibold">
-              <td colSpan={2} className="px-4 py-2 text-sm text-gray-700">Sous-total {label}</td>
-              <td className="px-4 py-2 text-right text-sm">
+              <td className="px-4 py-2 text-sm text-gray-700 sm:hidden">Sous-total</td>
+              <td colSpan={2} className="px-4 py-2 text-sm text-gray-700 hidden sm:table-cell">Sous-total {label}</td>
+              <td className="px-4 py-2 text-right text-sm whitespace-nowrap">
                 {formatMontantHT(filtered.reduce((s, c) => s + c.montantHT, 0))}
               </td>
-              <td className="px-4 py-2 text-right text-sm text-orange-600">
+              <td className="px-4 py-2 text-right text-sm text-orange-600 whitespace-nowrap hidden sm:table-cell">
                 {formatMontantHT(filtered.reduce((s, c) => s + c.valeurHtRestante, 0))}
               </td>
               <td />
