@@ -43,12 +43,11 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
 
-    // Defer measurement so iOS layout settles before we measure
     setTimeout(() => {
-      const barH = barRef.current?.getBoundingClientRect().height ?? 44;
-      const isMobile = window.innerWidth < 768;
-      const topbarH = isMobile ? 64 : 0;
-      const offset = topbarH + barH + 16;
+      // Measure the ACTUAL bottom edge of the sticky nav bar (works regardless of font-size / safe-area)
+      const navRect = barRef.current?.getBoundingClientRect();
+      const navBottom = navRect ? navRect.top + navRect.height : 100;
+      const offset = navBottom + 12;
       const y = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     }, 50);
@@ -56,7 +55,7 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
-    }, 100);
+    }, 150);
   };
 
   return (
