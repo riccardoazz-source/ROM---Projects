@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search, XCircle, CheckCircle } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
+import ScrollTableLeft from '@/components/ScrollTableLeft';
 import { Commande, Facture } from '@/types';
 
 function fmt(v: number) {
@@ -32,7 +33,7 @@ function CommandesSubSection({ commandes, type, label }: {
   return (
     <div>
       <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{label}</h4>
-      <div className="overflow-x-auto">
+      <ScrollTableLeft>
         <table className="rom-table">
           <thead>
             <tr>
@@ -78,7 +79,7 @@ function CommandesSubSection({ commandes, type, label }: {
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollTableLeft>
     </div>
   );
 }
@@ -178,7 +179,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
           )}
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <ScrollTableLeft>
         <table className="rom-table">
           <thead>
             <tr>
@@ -233,7 +234,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTableLeft>
     </div>
   );
 }
@@ -313,7 +314,7 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
       {filtered.length === 0 ? (
         <div className="p-8 text-center text-gray-400 text-sm">Aucune facture pour cette période</div>
       ) : (
-        <div className="overflow-x-auto">
+        <ScrollTableLeft>
           <table className="rom-table">
             <thead>
               <tr>
@@ -360,7 +361,7 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
               </tr>
             </tfoot>
           </table>
-        </div>
+        </ScrollTableLeft>
       )}
     </div>
   );

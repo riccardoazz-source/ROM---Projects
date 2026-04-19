@@ -35,10 +35,16 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
     manualRef.current = true;
-    // scrollIntoView respects scroll-margin-top (scroll-mt-28 = 98px ≈ nav height)
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // iOS Safari: scrollIntoView silently fails when html has overflow-x:hidden
+    // Use window.scrollTo with explicit computed offset instead
+    const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+    const stickyTop = fontSize * 4; // top-16 = 4rem (mobile header height)
+    const navH = barRef.current?.offsetHeight ?? 44;
+    const offset = stickyTop + navH + 8;
+    const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
-    btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (btn) btn.scrollIntoView({ inline: 'center', block: 'nearest' });
     setTimeout(() => { manualRef.current = false; }, 800);
   };
 

@@ -8,6 +8,7 @@ import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
 import ProjetNav from '@/components/ProjetNav';
 import BudgetRefreshButton from '@/components/BudgetRefreshButton';
+import ScrollTableLeft from '@/components/ScrollTableLeft';
 import { Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
 import type { Facture, HistoriquePoint } from '@/types';
@@ -231,7 +232,7 @@ export default async function ProjetPage({ params }: PageProps) {
               <BudgetRefreshButton />
             </div>
           ) : (
-          <div className="overflow-x-auto">
+          <ScrollTableLeft>
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
@@ -278,7 +279,7 @@ export default async function ProjetPage({ params }: PageProps) {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollTableLeft>
           )}
         </div>
       )}
