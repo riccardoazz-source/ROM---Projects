@@ -114,16 +114,6 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
 
           <Line
             type="monotone"
-            dataKey="montantCommandesHT"
-            name="Commandes HT"
-            stroke="#2B6CB0"
-            strokeWidth={2}
-            strokeDasharray="6 3"
-            dot={false}
-            activeDot={{ r: 5 }}
-          />
-          <Line
-            type="monotone"
             dataKey="montantFacturesHT"
             name="Factures HT cumulées"
             stroke="#ED8936"

@@ -10,52 +10,43 @@ interface NavSection {
 export default function ProjetNav({ sections }: { sections: NavSection[] }) {
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const barRef = useRef<HTMLDivElement>(null);
+  const manualRef = useRef(false);
 
+  // Scroll listener: whichever section's top is highest but still <= nav bottom = active
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    const ratios: Record<string, number> = {};
-
-    for (const s of sections) {
-      const el = document.getElementById(s.id);
-      if (!el) continue;
-
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          ratios[s.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
-          let bestId = '';
-          let bestRatio = -1;
-          for (const id of Object.keys(ratios)) {
-            if (ratios[id] > bestRatio) { bestRatio = ratios[id]; bestId = id; }
-          }
-          if (bestId) setActive(bestId);
-        },
-        { threshold: [0, 0.05, 0.2], rootMargin: '-100px 0px -50% 0px' }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    }
-
-    return () => observers.forEach(o => o.disconnect());
+    const onScroll = () => {
+      if (manualRef.current) return;
+      const navBottom = (barRef.current?.getBoundingClientRect().bottom ?? 100) + 8;
+      let current = sections[0]?.id ?? '';
+      for (const s of sections) {
+        const el = document.getElementById(s.id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= navBottom) current = s.id;
+      }
+      setActive(current);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, [sections]);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
     setActive(id);
+    manualRef.current = true;
 
-    setTimeout(() => {
-      // Measure the ACTUAL bottom edge of the sticky nav bar (works regardless of font-size / safe-area)
-      const navRect = barRef.current?.getBoundingClientRect();
-      const navBottom = navRect ? navRect.top + navRect.height : 100;
-      const offset = navBottom + 12;
-      const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    requestAnimationFrame(() => {
+      const navBottom = (barRef.current?.getBoundingClientRect().bottom ?? 100) + 12;
+      const y = el.getBoundingClientRect().top + window.scrollY - navBottom;
       window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-    }, 50);
 
-    setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ inline: 'center', block: 'nearest' });
-    }, 150);
+    });
+
+    // Re-enable scroll detection after smooth scroll finishes
+    setTimeout(() => { manualRef.current = false; }, 800);
   };
 
   return (
