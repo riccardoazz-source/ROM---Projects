@@ -7,6 +7,7 @@ import EvolutionChart from '@/components/charts/EvolutionChart';
 import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
 import ProjetNav from '@/components/ProjetNav';
+import BudgetRefreshButton from '@/components/BudgetRefreshButton';
 import { Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
 import type { Facture, HistoriquePoint } from '@/types';
@@ -50,13 +51,20 @@ export default async function ProjetPage({ params }: PageProps) {
     ? projet.historiqueChart
     : buildChartFromFactures(rapport.factures, rapport.montantTotalCommandesHT);
 
-  const hasBudget = !!(rapport.budget && rapport.budget.lignes.length > 0);
+  // Detect corrupt budget (factures mistakenly stored as budget by old parser):
+  // real budget libellés never contain DD/MM/YYYY dates or percentage chains like 0%4%100%
+  const FAKE_RE = /\d{2}\/\d{2}\/20\d{2}|\d+%\d+%/;
+  const FAKE_COL_RE = /montant\s+ttc|retenue\s+de\s+gar|validation\s+amo|date\s+facture|n°\s+facture/i;
+  const budgetExists = !!(rapport.budget && rapport.budget.lignes.length > 0);
+  const budgetValid = budgetExists &&
+    !rapport.budget!.colonnes.some(c => FAKE_COL_RE.test(c)) &&
+    rapport.budget!.lignes.filter(l => FAKE_RE.test(l.libelle)).length === 0;
 
   const navSections = [
     { id: 'bordereau', label: 'Bordereau' },
     { id: 'recap', label: 'Récapitulatif' },
     { id: 'evolution', label: 'Évolution' },
-    ...(hasBudget ? [{ id: 'budget', label: 'Budget' }] : []),
+    ...(budgetExists ? [{ id: 'budget', label: 'Budget' }] : []),
     { id: 'avancement', label: 'Avancement' },
     { id: 'commandes', label: 'Commandes' },
     { id: 'factures', label: 'Factures' },
@@ -213,7 +221,7 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Budget prévisionnel */}
-      {hasBudget && (
+      {budgetExists && (
         <div id="budget" className="rom-card overflow-hidden mb-8 scroll-mt-28 md:scroll-mt-14">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
@@ -221,6 +229,11 @@ export default async function ProjetPage({ params }: PageProps) {
               <span className="text-xs text-gray-500 italic">{rapport.budget!.titre}</span>
             )}
           </div>
+          {!budgetValid ? (
+            <div className="px-6 py-8 flex flex-col items-center gap-4 text-center">
+              <BudgetRefreshButton />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
@@ -269,6 +282,7 @@ export default async function ProjetPage({ params }: PageProps) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
