@@ -193,11 +193,8 @@ export default async function ProjetPage({ params }: PageProps) {
           <div id="evolution" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                Évolution des Factures HT
+                Total Commandes HT et Total Factures HT
               </h2>
-              <span className="text-xs text-gray-500">
-                Commandes : <strong className="text-rom-700">{formatMontantHT(rapport.montantTotalCommandesHT)}</strong>
-              </span>
             </div>
             <div className="p-5">
               <EvolutionChart data={chartData} />

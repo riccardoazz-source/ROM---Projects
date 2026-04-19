@@ -115,19 +115,18 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
           <Line
             type="monotone"
             dataKey="montantCommandesHT"
-            name="Commandes HT"
+            name="Montant HT Commandes"
             stroke="#2B6CB0"
             strokeWidth={2}
-            strokeDasharray="6 3"
-            dot={false}
-            activeDot={{ r: 5 }}
+            dot={{ r: isSinglePoint ? 6 : 3, fill: '#2B6CB0' }}
+            activeDot={{ r: 7 }}
           />
           <Line
             type="monotone"
             dataKey="montantFacturesHT"
-            name="Factures HT cumulées"
+            name="Montant HT Factures"
             stroke="#ED8936"
-            strokeWidth={2.5}
+            strokeWidth={2}
             dot={{ r: isSinglePoint ? 6 : 3, fill: '#ED8936' }}
             activeDot={{ r: 7 }}
           />
