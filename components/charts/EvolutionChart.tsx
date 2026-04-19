@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
@@ -89,51 +90,51 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
 
   const sorted = [...data].sort((a, b) => labelSortKey(a.date) - labelSortKey(b.date));
   const isSinglePoint = sorted.length === 1;
+  const commandesTotal = Math.max(...sorted.map(d => d.montantCommandesHT));
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={sorted} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
-        <XAxis
-          dataKey="date"
-          tickFormatter={formatLabel}
-          tick={{ fontSize: 11, fill: '#718096' }}
-          axisLine={{ stroke: '#E2E8F0' }}
-          tickLine={false}
-        />
-        <YAxis
-          tickFormatter={formatYAxis}
-          tick={{ fontSize: 11, fill: '#718096' }}
-          axisLine={false}
-          tickLine={false}
-          width={55}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+    <div style={{ width: '100%', overflow: 'hidden' }}>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={sorted} margin={{ top: 16, right: 20, left: 10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
+          <XAxis
+            dataKey="date"
+            tickFormatter={formatLabel}
+            tick={{ fontSize: 11, fill: '#718096' }}
+            axisLine={{ stroke: '#E2E8F0' }}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={formatYAxis}
+            tick={{ fontSize: 11, fill: '#718096' }}
+            axisLine={false}
+            tickLine={false}
+            width={55}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
 
-        {/* Budget total (flat line — shows the ceiling) */}
-        <Line
-          type="monotone"
-          dataKey="montantCommandesHT"
-          name="Total Commandes HT"
-          stroke="#1B3A5C"
-          strokeWidth={2}
-          strokeDasharray={isSinglePoint ? undefined : '6 3'}
-          dot={isSinglePoint ? { r: 6, fill: '#1B3A5C' } : false}
-          activeDot={{ r: 5 }}
-        />
+          {/* Total commandes as a horizontal reference — not a data series */}
+          <ReferenceLine
+            y={commandesTotal}
+            stroke="#1B3A5C"
+            strokeDasharray="6 3"
+            strokeWidth={1.5}
+            label={{ value: `Commandes ${formatYAxis(commandesTotal)}`, position: 'insideTopRight', fontSize: 10, fill: '#1B3A5C', dy: -4 }}
+          />
 
-        {/* Factures cumulées */}
-        <Line
-          type="monotone"
-          dataKey="montantFacturesHT"
-          name="Factures HT cumulées"
-          stroke="#ED8936"
-          strokeWidth={2.5}
-          dot={{ r: isSinglePoint ? 6 : 3, fill: '#ED8936' }}
-          activeDot={{ r: 7 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+          {/* Factures cumulées */}
+          <Line
+            type="monotone"
+            dataKey="montantFacturesHT"
+            name="Factures HT cumulées"
+            stroke="#ED8936"
+            strokeWidth={2.5}
+            dot={{ r: isSinglePoint ? 6 : 3, fill: '#ED8936' }}
+            activeDot={{ r: 7 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

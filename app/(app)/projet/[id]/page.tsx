@@ -45,12 +45,14 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
-  // Reject budget that was parsed from the factures section (a common parser false-positive)
-  const BUDGET_INVALID_RE = /facture|situation\s*n°|bordereau|validation\s*amo|% facture|avancement total/i;
+  // Reject budget mis-parsed from the factures section — check column headers which are very specific
+  const FAKE_COL_RE = /montant\s+ttc|retenue\s+de\s+garantie|validation\s+amo|date\s+facture|n°\s+facture|situation\s+n°/i;
+  const FAKE_ROW_RE = /\btotal\s+\(\d+\s+factures?\b|\bdate\s+de\s+validation\b|\bliste\s+des\s+factures\b/i;
   const hasBudget = !!(
     rapport.budget &&
     rapport.budget.lignes.length > 0 &&
-    !rapport.budget.lignes.some(l => BUDGET_INVALID_RE.test(l.libelle))
+    !rapport.budget.colonnes.some(c => FAKE_COL_RE.test(c)) &&
+    rapport.budget.lignes.filter(l => FAKE_ROW_RE.test(l.libelle)).length === 0
   );
 
   // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
@@ -69,7 +71,7 @@ export default async function ProjetPage({ params }: PageProps) {
   ];
 
   return (
-    <div>
+    <div className="w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div className="min-w-0">

@@ -43,7 +43,7 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
 
-    // Defer measurement by one tick so layout is stable
+    // Defer measurement so iOS layout settles before we measure
     setTimeout(() => {
       const barH = barRef.current?.getBoundingClientRect().height ?? 44;
       const isMobile = window.innerWidth < 768;
@@ -51,7 +51,7 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
       const offset = topbarH + barH + 16;
       const y = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-    }, 0);
+    }, 50);
 
     setTimeout(() => {
       const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;

@@ -25,6 +25,7 @@ body {
   color: #1E293B;
   background: #F1F5F9;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ── Scrollbars ── */
