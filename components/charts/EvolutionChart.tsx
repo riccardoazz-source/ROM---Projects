@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { HistoriquePoint } from '@/types';
@@ -90,12 +89,11 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
 
   const sorted = [...data].sort((a, b) => labelSortKey(a.date) - labelSortKey(b.date));
   const isSinglePoint = sorted.length === 1;
-  const commandesTotal = Math.max(...sorted.map(d => d.montantCommandesHT));
 
   return (
     <div style={{ width: '100%', overflow: 'hidden' }}>
       <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={sorted} margin={{ top: 16, right: 20, left: 10, bottom: 5 }}>
+        <LineChart data={sorted} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#EDF2F7" />
           <XAxis
             dataKey="date"
@@ -114,16 +112,6 @@ export default function EvolutionChart({ data }: EvolutionChartProps) {
           <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
 
-          {/* Total commandes as a horizontal reference — not a data series */}
-          <ReferenceLine
-            y={commandesTotal}
-            stroke="#1B3A5C"
-            strokeDasharray="6 3"
-            strokeWidth={1.5}
-            label={{ value: `Commandes ${formatYAxis(commandesTotal)}`, position: 'insideTopRight', fontSize: 10, fill: '#1B3A5C', dy: -4 }}
-          />
-
-          {/* Factures cumulées */}
           <Line
             type="monotone"
             dataKey="montantFacturesHT"

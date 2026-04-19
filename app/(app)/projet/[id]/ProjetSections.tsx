@@ -316,9 +316,9 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
           <table className="rom-table">
             <thead>
               <tr>
-                <th className="whitespace-nowrap">Date facture</th>
+                <th className="hidden sm:table-cell whitespace-nowrap">Date facture</th>
                 <th>N° Facture / Situation</th>
-                <th>Société</th>
+                <th className="hidden sm:table-cell">Société</th>
                 <th className="hidden sm:table-cell whitespace-nowrap">Date validation AMO</th>
                 <th className="hidden sm:table-cell text-right">Montant HT</th>
                 <th className="text-right whitespace-nowrap">Montant TTC</th>
@@ -329,9 +329,9 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
             <tbody>
               {filtered.map((f, i) => (
                 <tr key={i}>
-                  <td className="text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
+                  <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
                   <td className="font-medium text-xs">{f.factureOuSituation}</td>
-                  <td className="text-xs">{f.societe}</td>
+                  <td className="hidden sm:table-cell text-xs">{f.societe}</td>
                   <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
                   <td className="hidden sm:table-cell text-right whitespace-nowrap">{fmt(f.montantHT)}</td>
                   <td className="text-right font-bold text-rom-600 whitespace-nowrap">{fmt(f.montantTTC)}</td>
@@ -348,11 +348,14 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
             </tbody>
             <tfoot>
               <tr className="bg-rom-600 text-white font-bold">
-                <td colSpan={3} className="px-4 py-3 text-sm">TOTAL ({filtered.length} factures)</td>
+                <td className="hidden sm:table-cell" />
+                <td className="px-4 py-3 text-sm">TOTAL ({filtered.length} fact.)</td>
+                <td className="hidden sm:table-cell" />
                 <td className="hidden sm:table-cell" />
                 <td className="hidden sm:table-cell px-4 py-3 text-right text-sm whitespace-nowrap">{fmt(totalHT)}</td>
                 <td className="px-4 py-3 text-right text-sm whitespace-nowrap">{fmt(totalTTC)}</td>
-                <td className="hidden sm:table-cell" colSpan={2} />
+                <td className="hidden sm:table-cell" />
+                <td />
               </tr>
             </tfoot>
           </table>

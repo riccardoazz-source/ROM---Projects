@@ -45,14 +45,14 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
-  // Reject budget mis-parsed from the factures section — check column headers which are very specific
-  const FAKE_COL_RE = /montant\s+ttc|retenue\s+de\s+garantie|validation\s+amo|date\s+facture|n°\s+facture|situation\s+n°/i;
-  const FAKE_ROW_RE = /\btotal\s+\(\d+\s+factures?\b|\bdate\s+de\s+validation\b|\bliste\s+des\s+factures\b/i;
+  // Detect budget mis-parsed from factures: libellés with dates (DD/MM/YYYY) or %chains (0%4%39%) are dead giveaways
+  const FAKE_LIBELLE_RE = /\d{2}\/\d{2}\/20\d{2}|\d+%\d+%/;
+  const FAKE_COL_RE = /montant\s+ttc|retenue|validation\s+amo|date\s+facture|n°\s+facture/i;
   const hasBudget = !!(
     rapport.budget &&
     rapport.budget.lignes.length > 0 &&
     !rapport.budget.colonnes.some(c => FAKE_COL_RE.test(c)) &&
-    rapport.budget.lignes.filter(l => FAKE_ROW_RE.test(l.libelle)).length === 0
+    rapport.budget.lignes.filter(l => FAKE_LIBELLE_RE.test(l.libelle)).length === 0
   );
 
   // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
@@ -106,7 +106,7 @@ export default async function ProjetPage({ params }: PageProps) {
       {/* Récapitulatif + Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Récapitulatif dépenses */}
-        <div id="recap" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14">
+        <div id="recap" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14 min-w-0">
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Récapitulatif des dépenses</h2>
           </div>
@@ -188,13 +188,16 @@ export default async function ProjetPage({ params }: PageProps) {
         </div>
 
         {/* Graphiques */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6 min-w-0">
           {/* Évolution */}
           <div id="evolution" className="rom-card overflow-hidden scroll-mt-28 md:scroll-mt-14">
-            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                Évolution — Total Commandes HT et Factures HT
+                Évolution des Factures HT
               </h2>
+              <span className="text-xs text-gray-500">
+                Commandes : <strong className="text-rom-700">{formatMontantHT(rapport.montantTotalCommandesHT)}</strong>
+              </span>
             </div>
             <div className="p-5">
               <EvolutionChart data={chartData} />
