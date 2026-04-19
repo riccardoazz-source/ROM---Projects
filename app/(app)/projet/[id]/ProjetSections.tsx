@@ -181,16 +181,16 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
         <table className="rom-table">
           <thead>
             <tr>
-              <th>Date facture</th>
+              <th className="hidden sm:table-cell whitespace-nowrap">Date facture</th>
               <th>N° Facture / Situation</th>
-              <th>Société</th>
-              <th>Date validation AMO</th>
-              <th className="text-right">Montant HT</th>
-              <th className="text-right">Montant TTC</th>
-              <th className="text-right">Retenue</th>
-              <th className="text-right">% Commande</th>
-              <th className="text-right">% Avancement</th>
-              <th>Statut</th>
+              <th className="hidden sm:table-cell">Société</th>
+              <th className="hidden md:table-cell whitespace-nowrap">Date validation AMO</th>
+              <th className="hidden sm:table-cell text-right">Montant HT</th>
+              <th className="text-right whitespace-nowrap">Montant TTC</th>
+              <th className="hidden md:table-cell text-right">Retenue</th>
+              <th className="hidden md:table-cell text-right">% Commande</th>
+              <th className="text-right whitespace-nowrap">% Avanc.</th>
+              <th className="hidden sm:table-cell">Statut</th>
             </tr>
           </thead>
           <tbody>
@@ -203,16 +203,16 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
             ) : (
               filtered.map((f, i) => (
                 <tr key={i}>
-                  <td className="text-gray-500 text-xs">{f.dateFacture}</td>
-                  <td className="font-medium text-sm">{f.factureOuSituation}</td>
-                  <td>{f.societe}</td>
-                  <td className="text-gray-500 text-xs">{f.dateValidationAMO}</td>
-                  <td className="text-right font-medium">{formatMontantHT(f.montantHT)}</td>
-                  <td className="text-right font-bold text-rom-600">{formatMontantHT(f.montantTTC)}</td>
-                  <td className="text-right text-xs">
+                  <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
+                  <td className="font-medium text-xs">{f.factureOuSituation}</td>
+                  <td className="hidden sm:table-cell text-xs">{f.societe}</td>
+                  <td className="hidden md:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
+                  <td className="hidden sm:table-cell text-right font-medium">{formatMontantHT(f.montantHT)}</td>
+                  <td className="text-right font-bold text-rom-600 whitespace-nowrap">{formatMontantHT(f.montantTTC)}</td>
+                  <td className="hidden md:table-cell text-right text-xs">
                     {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
                   </td>
-                  <td className="text-right text-xs font-medium">{f.pourcentageFactureSurCommande}%</td>
+                  <td className="hidden md:table-cell text-right text-xs font-medium">{f.pourcentageFactureSurCommande}%</td>
                   <td className="text-right">
                     <span
                       className={`text-xs font-bold ${
@@ -222,7 +222,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
                       {f.pourcentageAvancementTotal}%
                     </span>
                   </td>
-                  <td>
+                  <td className="hidden sm:table-cell">
                     <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
                       <CheckCircle className="w-3 h-3" /> Validée
                     </span>

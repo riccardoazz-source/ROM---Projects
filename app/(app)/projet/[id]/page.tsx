@@ -45,28 +45,18 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
-  // Detect budget mis-parsed from factures: libellés with dates (DD/MM/YYYY) or %chains (0%4%39%) are dead giveaways
-  const FAKE_LIBELLE_RE = /\d{2}\/\d{2}\/20\d{2}|\d+%\d+%/;
-  const FAKE_COL_RE = /montant\s+ttc|retenue|validation\s+amo|date\s+facture|n°\s+facture/i;
-  const hasBudget = !!(
-    rapport.budget &&
-    rapport.budget.lignes.length > 0 &&
-    !rapport.budget.colonnes.some(c => FAKE_COL_RE.test(c)) &&
-    rapport.budget.lignes.filter(l => FAKE_LIBELLE_RE.test(l.libelle)).length === 0
-  );
-
   // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
   const chartData = projet.historiqueChart.length >= 2
     ? projet.historiqueChart
     : buildChartFromFactures(rapport.factures, rapport.montantTotalCommandesHT);
 
-  const hasBudgetData = !!(rapport.budget && rapport.budget.lignes.length > 0);
+  const hasBudget = !!(rapport.budget && rapport.budget.lignes.length > 0);
 
   const navSections = [
     { id: 'bordereau', label: 'Bordereau' },
     { id: 'recap', label: 'Récapitulatif' },
     { id: 'evolution', label: 'Évolution' },
-    ...(hasBudgetData ? [{ id: 'budget', label: 'Budget' }] : []),
+    ...(hasBudget ? [{ id: 'budget', label: 'Budget' }] : []),
     { id: 'avancement', label: 'Avancement' },
     { id: 'commandes', label: 'Commandes' },
     { id: 'factures', label: 'Factures' },
@@ -223,7 +213,7 @@ export default async function ProjetPage({ params }: PageProps) {
       </div>
 
       {/* Budget prévisionnel */}
-      {hasBudgetData && (
+      {hasBudget && (
         <div id="budget" className="rom-card overflow-hidden mb-8 scroll-mt-28 md:scroll-mt-14">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Budget prévisionnel</h2>
@@ -231,11 +221,6 @@ export default async function ProjetPage({ params }: PageProps) {
               <span className="text-xs text-gray-500 italic">{rapport.budget!.titre}</span>
             )}
           </div>
-          {!hasBudget ? (
-            <div className="px-6 py-8 text-center text-sm text-orange-600">
-              Données budget non valides — re-importez ce rapport pour récupérer le budget correct.
-            </div>
-          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
@@ -284,7 +269,6 @@ export default async function ProjetPage({ params }: PageProps) {
               </tbody>
             </table>
           </div>
-          )}
         </div>
       )}
 
