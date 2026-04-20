@@ -19,12 +19,13 @@ interface Props {
   navSections: { id: string; label: string }[];
   pctFacturation: number;
   mode: 'admin' | 'share';
+  navStickyTop?: string;
 }
 
-export default function ProjetPageContent({ rapport, chartData, budgetExists, budgetValid, navSections, pctFacturation, mode }: Props) {
+export default function ProjetPageContent({ rapport, chartData, budgetExists, budgetValid, navSections, pctFacturation, mode, navStickyTop }: Props) {
   return (
     <div className="w-full min-w-0">
-      <ProjetNav sections={navSections} />
+      <ProjetNav sections={navSections} stickyTop={navStickyTop} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-8">

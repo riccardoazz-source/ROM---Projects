@@ -49,9 +49,9 @@ export default async function PartageProjetPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Public header — no sidebar, no admin actions */}
+      {/* Public header — no sidebar, no admin actions. h-14 = 3.5rem = 49px → nav sticky top-14 */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <RomLogo />
           <div className="flex items-center gap-3 min-w-0">
             <div className="hidden sm:block text-right">
@@ -76,6 +76,7 @@ export default async function PartageProjetPage({ params }: PageProps) {
           navSections={navSections}
           pctFacturation={pctFacturation}
           mode="share"
+          navStickyTop="top-14"
         />
       </div>
 

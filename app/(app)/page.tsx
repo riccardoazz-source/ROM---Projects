@@ -2,7 +2,6 @@ import { getAllProjets, getDernierRapport, formatMontantHT } from '@/lib/data';
 import DashboardTable, { DashboardRow } from '@/components/DashboardTable';
 import ProjectCard from '@/components/ProjectCard';
 import StatCard from '@/components/StatCard';
-import FacturesDashboard, { FactureDashRow } from '@/components/FacturesDashboard';
 import { Euro, TrendingUp, FolderKanban, Receipt } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,6 @@ export default async function DashboardPage() {
   let totalFactures = 0, totalCommandes = 0, sumAvance = 0, n = 0;
 
   const rows: DashboardRow[] = [];
-  const factureRows: FactureDashRow[] = [];
 
   for (const p of projets) {
     const r = getDernierRapport(p);
@@ -38,37 +36,14 @@ export default async function DashboardPage() {
       nom: p.nom,
       client: p.client,
       mois: dateStr,
+      statut: p.statut ?? 'en_cours',
       commandesHT: r.montantTotalCommandesHT,
       facturesHT: r.montantTotalFacturesHT,
       commandes: r.nombreTotalCommandes,
       factures: r.nombreTotalFactures,
       avancement: r.pourcentageAvancementTotal,
     });
-
-    for (const f of r.factures) {
-      factureRows.push({
-        projetId: p.id,
-        projetNom: p.nom,
-        dateFacture: f.dateFacture,
-        factureOuSituation: f.factureOuSituation,
-        societe: f.societe,
-        dateValidationAMO: f.dateValidationAMO,
-        montantHT: f.montantHT,
-        montantTTC: f.montantTTC,
-        retenueGarantie: f.retenueGarantie,
-      });
-    }
   }
-
-  // Sort factures by validation date desc
-  factureRows.sort((a, b) => {
-    const toTs = (d: string) => {
-      if (!d || d.length < 10) return 0;
-      const [dd, mm, yyyy] = d.split('/');
-      return parseInt(yyyy) * 10000 + parseInt(mm) * 100 + parseInt(dd);
-    };
-    return toTs(b.dateValidationAMO) - toTs(a.dateValidationAMO);
-  });
 
   const avgAvance  = n > 0 ? Math.round(sumAvance / n) : 0;
   const pctFacture = totalCommandesHT > 0 ? Math.round((totalFacturesHT / totalCommandesHT) * 100) : 0;
@@ -88,8 +63,6 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardTable rows={rows} />
-
-      <FacturesDashboard rows={factureRows} />
 
       <div>
         <p className="section-title">Projets</p>

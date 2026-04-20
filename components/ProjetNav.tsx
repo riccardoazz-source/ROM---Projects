@@ -7,7 +7,7 @@ interface NavSection {
   label: string;
 }
 
-export default function ProjetNav({ sections }: { sections: NavSection[] }) {
+export default function ProjetNav({ sections, stickyTop = 'top-16 md:top-0' }: { sections: NavSection[]; stickyTop?: string }) {
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const barRef = useRef<HTMLDivElement>(null);
   const manualRef = useRef(false);
@@ -35,13 +35,10 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
     if (!el) return;
     setActive(id);
     manualRef.current = true;
-    // iOS Safari: scrollIntoView silently fails when html has overflow-x:hidden
-    // Use window.scrollTo with explicit computed offset instead
-    const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
-    const stickyTop = fontSize * 4; // top-16 = 4rem (mobile header height)
-    const navH = barRef.current?.offsetHeight ?? 44;
-    const offset = stickyTop + navH + 8;
-    const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
+    const navRect = barRef.current?.getBoundingClientRect();
+    const navTopPx = navRect?.top ?? 0;   // actual sticky position from viewport top
+    const navH     = navRect?.height ?? 44;
+    const y = el.getBoundingClientRect().top + window.pageYOffset - navTopPx - navH - 8;
     window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     const btn = barRef.current?.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
     if (btn) btn.scrollIntoView({ inline: 'center', block: 'nearest' });
@@ -51,8 +48,8 @@ export default function ProjetNav({ sections }: { sections: NavSection[] }) {
   return (
     <div
       ref={barRef}
-      className="sticky top-16 md:top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm
-                 -mx-3 sm:-mx-6 md:-mx-8 mb-8 overflow-x-auto scrollbar-none"
+      className={`sticky ${stickyTop} z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm
+                 -mx-3 sm:-mx-6 md:-mx-8 mb-8 overflow-x-auto scrollbar-none`}
     >
       <div className="flex min-w-max px-1 sm:px-2">
         {sections.map(s => (

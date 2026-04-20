@@ -33,12 +33,16 @@ function folderId(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function folderParts(name: string): { nom: string; client: string; id: string } {
-  const parts = name.split(/\s*-\s*/);
+function folderParts(name: string): { nom: string; client: string; id: string; termine: boolean } {
+  const TERMINE_RE = /[\s\-–]*termin[ée]s?\.?$/i;
+  const termine = TERMINE_RE.test(name);
+  const cleanName = name.replace(TERMINE_RE, '').replace(/[\s\-–]+$/, '').trim();
+  const parts = cleanName.split(/\s*-\s*/);
   return {
-    nom: parts[0]?.trim() || name,
+    nom: parts[0]?.trim() || cleanName,
     client: parts.slice(1).join(' - ').trim() || 'Client inconnu',
-    id: folderId(name),
+    id: folderId(cleanName),
+    termine,
   };
 }
 
@@ -46,7 +50,7 @@ async function processFolder(
   folder: { id: string; name: string },
   apiKey: string,
 ): Promise<{ ok: boolean; msg: string }> {
-  const { nom, client, id } = folderParts(folder.name);
+  const { nom, client, id, termine } = folderParts(folder.name);
 
   // List PDFs
   const pdfsRes = await driveGet(
@@ -118,6 +122,7 @@ async function processFolder(
     rapports: [],
     historiqueChart: [],
   };
+  projet.statut = termine ? 'termine' : 'en_cours';
   projet.rapports = [rapport];
 
   // Normalize old-format labels ("AVR/26") to YYYY/MM on the fly
@@ -177,7 +182,7 @@ export async function GET() {
 
     // Build the complete set of Drive folder IDs BEFORE processing.
     // This is what we use for cleanup — NOT just the ones we successfully processed.
-    const allDriveIds = new Set(folders.map(f => folderId(f.name)));
+    const allDriveIds = new Set(folders.map(f => folderParts(f.name).id));
 
     // 3. Process all folders in parallel
     const results = await Promise.all(folders.map(f => processFolder(f, apiKey)));
