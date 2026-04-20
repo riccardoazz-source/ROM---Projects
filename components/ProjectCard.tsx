@@ -75,7 +75,7 @@ export default function ProjectCard({ projet }: { projet: Projet }) {
               <Receipt className="w-3.5 h-3.5" />{rapport.nombreTotalFactures} factures
             </span>
           </div>
-          <CopyShareButton projetId={projet.id} projetNom={projet.nom} />
+          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
         </div>
       </div>
     </div>

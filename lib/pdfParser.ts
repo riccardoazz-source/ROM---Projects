@@ -580,13 +580,49 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const headerParts: string[] = [];
   let dataStartIdx = startIdx;
 
+  // Known French budget vocabulary patterns, in priority order
+  const BUDGET_VOCAB_PATTERNS: RegExp[] = [
+    /Désignation|Intitulé|Libellé|Prestation/i,
+    /(?:Coût|Montant|Dépenses?)\s*(?:prévisionnel|prévu|total|initial)s?/i,
+    /(?:Coûts?|Montants?|Dépenses?)\s*(?:engagés?|réalisés?|commandés?|fact[uo]rés?)/i,
+    /Reste\s+à\s+(?:engager|facturer|dépenser|réaliser|commander)/i,
+    /(?:Aléas?|Imprévus?|Réserve)s?/i,
+    /Disponible/i,
+    /Total\s+(?:prévisionnel|général)/i,
+    /(?:Écart|Solde)/i,
+  ];
+
   for (let i = startIdx; i < Math.min(startIdx + 8, lines.length); i++) {
     const l = lines[i];
     if (!l || SKIP.test(l)) continue;
     const amts = getAmounts(l);
     if (amts.length > 0) { dataStartIdx = i; break; }
-    // Split on 2+ spaces to separate column names
-    const parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+
+    // 1. Try splitting on 2+ spaces
+    let parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+
+    // 2. If that yields < 2 parts, try tab splitting
+    if (parts.length < 2) {
+      const tabParts = l.split(/\t/).map(s => s.trim()).filter(Boolean);
+      if (tabParts.length >= 2) parts = tabParts;
+    }
+
+    // 3. If still < 2 parts, scan for known budget vocabulary terms in order of occurrence
+    if (parts.length < 2) {
+      const matches: Array<{ index: number; text: string }> = [];
+      for (const pattern of BUDGET_VOCAB_PATTERNS) {
+        const re = new RegExp(pattern.source, 'gi');
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(l)) !== null) {
+          matches.push({ index: m.index, text: m[0] });
+        }
+      }
+      if (matches.length >= 2) {
+        matches.sort((a, b) => a.index - b.index);
+        parts = matches.map(m => m.text);
+      }
+    }
+
     if (parts.length >= 2) {
       // Skip first part if it's a row-label header like "Intitulés", "Désignation"
       const toAdd = /^(intitulé|libellé|désignation|prestation)/i.test(parts[0]) ? parts.slice(1) : parts;

@@ -11,7 +11,7 @@ import BudgetRefreshButton from '@/components/BudgetRefreshButton';
 import ScrollTableLeft from '@/components/ScrollTableLeft';
 import { Euro, Hash, FileText, TrendingUp } from 'lucide-react';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from './ProjetSections';
-import type { Facture, HistoriquePoint } from '@/types';
+import type { Facture, HistoriquePoint, RapportMensuel } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +19,18 @@ interface PageProps {
   params: { id: string };
 }
 
-// Build chart history from facture validation dates when we don't have enough sync history
+// Build chart from multiple rapports (each has its own totals snapshot)
+function buildChartFromRapports(rapports: RapportMensuel[]): HistoriquePoint[] {
+  return rapports
+    .filter(r => r.date && r.mois)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(r => {
+      const label = r.mois.substring(0, 3).toUpperCase() + '/' + r.mois.slice(-2);
+      return { date: label, montantCommandesHT: r.montantTotalCommandesHT, montantFacturesHT: r.montantTotalFacturesHT };
+    });
+}
+
+// Fallback: build from facture validation dates (commandes stays flat = current total)
 function buildChartFromFactures(factures: Facture[], commandesHT: number): HistoriquePoint[] {
   const byMonth = new Map<string, number>();
   for (const f of factures) {
@@ -47,10 +58,12 @@ export default async function ProjetPage({ params }: PageProps) {
     ? Math.round((rapport.montantTotalFacturesHT / rapport.montantTotalCommandesHT) * 100)
     : 0;
 
-  // Use sync history when ≥2 months, otherwise derive from factures (cumulative by validation month)
+  // Priority: stored sync history → derived from rapports snapshots → derived from factures
   const chartData = projet.historiqueChart.length >= 2
     ? projet.historiqueChart
-    : buildChartFromFactures(rapport.factures, rapport.montantTotalCommandesHT);
+    : projet.rapports.length >= 2
+      ? buildChartFromRapports(projet.rapports)
+      : buildChartFromFactures(rapport.factures, rapport.montantTotalCommandesHT);
 
   // Detect corrupt budget (factures mistakenly stored as budget by old parser):
   // real budget libellés never contain DD/MM/YYYY dates or percentage chains like 0%4%100%
@@ -84,7 +97,7 @@ export default async function ProjetPage({ params }: PageProps) {
             <p className="text-xs text-gray-500 font-medium">Dernier rapport</p>
             <p className="text-sm font-bold text-rom-700">{rapport.mois}</p>
           </div>
-          <CopyShareButton projetId={projet.id} projetNom={projet.nom} />
+          <CopyShareButton shareToken={projet.shareToken} projetNom={projet.nom} />
         </div>
       </div>
 

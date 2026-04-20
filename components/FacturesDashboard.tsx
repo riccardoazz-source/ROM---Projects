@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Search, X, Calendar } from 'lucide-react';
+import ScrollTableLeft from '@/components/ScrollTableLeft';
 
 function fmt(v: number) {
   const n = typeof v === 'number' && isFinite(v) ? v : 0;
@@ -113,15 +114,15 @@ export default function FacturesDashboard({ rows }: { rows: FactureDashRow[] }) 
       {rows.length === 0 ? (
         <div className="p-8 text-center text-slate-400 text-sm">Aucune facture enregistrée</div>
       ) : (
-        <div className="overflow-x-auto">
+        <ScrollTableLeft>
           <table className="rom-table">
             <thead>
               <tr>
                 <th>Projet</th>
-                <th className="hidden sm:table-cell">N° Facture</th>
+                <th>N° Facture</th>
                 <th className="hidden md:table-cell">Société</th>
                 <th className="hidden md:table-cell">Date fact.</th>
-                <th className="whitespace-nowrap">Validation AMO</th>
+                <th className="whitespace-nowrap hidden sm:table-cell">Validation AMO</th>
                 <th className="text-right whitespace-nowrap hidden sm:table-cell">Montant HT</th>
                 <th className="text-right whitespace-nowrap">Montant TTC</th>
               </tr>
@@ -140,10 +141,10 @@ export default function FacturesDashboard({ rows }: { rows: FactureDashRow[] }) 
                       {r.projetNom}
                     </Link>
                   </td>
-                  <td className="text-xs hidden sm:table-cell">{r.factureOuSituation}</td>
+                  <td className="text-xs max-w-[120px] truncate">{r.factureOuSituation}</td>
                   <td className="text-xs hidden md:table-cell">{r.societe}</td>
                   <td className="text-xs text-slate-400 hidden md:table-cell whitespace-nowrap">{r.dateFacture}</td>
-                  <td className="text-xs text-slate-500 whitespace-nowrap">{r.dateValidationAMO}</td>
+                  <td className="text-xs text-slate-500 whitespace-nowrap hidden sm:table-cell">{r.dateValidationAMO}</td>
                   <td className="text-right font-semibold tabular-nums text-xs whitespace-nowrap hidden sm:table-cell">{fmt(r.montantHT)}</td>
                   <td className="text-right font-bold tabular-nums text-xs whitespace-nowrap text-rom-700">{fmt(r.montantTTC)}</td>
                 </tr>
@@ -156,13 +157,13 @@ export default function FacturesDashboard({ rows }: { rows: FactureDashRow[] }) 
                 </td>
                 <td className="hidden md:table-cell" />
                 <td className="hidden md:table-cell" />
-                <td />
+                <td className="hidden sm:table-cell" />
                 <td className="text-right tabular-nums whitespace-nowrap hidden sm:table-cell">{fmt(totalHT)}</td>
                 <td className="text-right tabular-nums whitespace-nowrap">{fmt(totalTTC)}</td>
               </tr>
             </tfoot>
           </table>
-        </div>
+        </ScrollTableLeft>
       )}
     </div>
   );
