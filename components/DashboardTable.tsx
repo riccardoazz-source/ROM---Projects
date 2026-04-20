@@ -5,6 +5,23 @@ import Link from 'next/link';
 import { Search, X, Calendar } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
 
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function dateToMonthKey(dateStr: string): string {
+  // DD/MM/YYYY → YYYY/MM (sorts correctly as string)
+  if (dateStr && dateStr.length >= 10 && dateStr[2] === '/') {
+    return `${dateStr.slice(6, 10)}/${dateStr.slice(3, 5)}`;
+  }
+  return dateStr;
+}
+
+function monthKeyToLabel(key: string): string {
+  // YYYY/MM → "Avril 2026"
+  const [yyyy, mm] = key.split('/');
+  const idx = parseInt(mm, 10) - 1;
+  return (idx >= 0 && idx < 12) ? `${MONTHS_FR[idx]} ${yyyy}` : key;
+}
+
 function fmt(v: number) {
   const n = typeof v === 'number' && isFinite(v) ? v : 0;
   const [int, dec] = n.toFixed(2).split('.');
@@ -30,13 +47,13 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
   const [showTermine, setShowTermine] = useState(true);
 
   const months = useMemo(() => {
-    const set = new Set(rows.map(r => r.mois));
+    const set = new Set(rows.map(r => dateToMonthKey(r.mois)));
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [rows]);
 
   const filtered = useMemo(() => rows.filter(r => {
     if (!showTermine && r.statut === 'termine') return false;
-    if (selectedMonth && r.mois !== selectedMonth) return false;
+    if (selectedMonth && dateToMonthKey(r.mois) !== selectedMonth) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return r.nom.toLowerCase().includes(q) || r.client.toLowerCase().includes(q);
@@ -104,7 +121,7 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
                          text-white focus:outline-none focus:bg-white/20 appearance-none w-36"
             >
               <option value="">Tous les mois</option>
-              {months.map(m => <option key={m} value={m}>{m}</option>)}
+              {months.map(m => <option key={m} value={m}>{monthKeyToLabel(m)}</option>)}
             </select>
           </div>
           <div className="relative">

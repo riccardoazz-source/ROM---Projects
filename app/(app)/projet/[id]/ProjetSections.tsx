@@ -329,8 +329,13 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((f, i) => (
-                <tr key={i}>
+              {(() => {
+                // Identify the first (primary) AMO validation date; later dates get muted styling
+                const primaryDate = filtered.find(f => f.dateValidationAMO)?.dateValidationAMO ?? '';
+                return filtered.map((f, i) => {
+                  const isSecondary = f.dateValidationAMO && f.dateValidationAMO !== primaryDate;
+                  return (
+                <tr key={i} className={isSecondary ? 'bg-slate-50 text-slate-400' : undefined}>
                   <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
                   <td className="font-medium text-xs">{f.factureOuSituation}</td>
                   <td className="hidden sm:table-cell text-xs">{f.societe}</td>
@@ -346,7 +351,9 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
                     </span>
                   </td>
                 </tr>
-              ))}
+                  );
+                });
+              })()}
             </tbody>
             <tfoot>
               <tr className="bg-rom-600 text-white font-bold">

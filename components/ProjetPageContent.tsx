@@ -31,7 +31,7 @@ export default function ProjetPageContent({ rapport, chartData, budgetExists, bu
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <StatCard label="Total Commandes HT" value={formatMontantHT(rapport.montantTotalCommandesHT)} sub={`TTC : ${formatMontantHT(rapport.montantTotalCommandesTTC)}`} icon={Euro} />
         <StatCard label="Total Factures HT" value={formatMontantHT(rapport.montantTotalFacturesHT)} sub={`TTC : ${formatMontantHT(rapport.montantTotalFacturesTTC)}`} icon={FileText} accent="bg-orange-500" />
-        <StatCard label="Avancement total" value={`${rapport.pourcentageAvancementTotal}%`} sub={`Facturation : ${pctFacturation}%`} icon={TrendingUp} accent="bg-emerald-600" />
+        <StatCard label="Avancement total" value={`${rapport.pourcentageAvancementTotal}%`} icon={TrendingUp} accent="bg-emerald-600" />
         <StatCard label="Commandes" value={`${rapport.nombreCommandesActives} actives`} sub={`${rapport.nombreTotalCommandes} total · ${rapport.nombreTotalAvenants} avenants`} icon={Hash} accent="bg-violet-600" />
       </div>
 
