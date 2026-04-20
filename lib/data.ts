@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { Projet, RapportMensuel, Facture } from '@/types';
 import { supabase } from './db';
+import { getMoisLabel } from './projetUtils';
 
 export interface AppConfig {
   googleDriveFolderId: string;
@@ -123,7 +124,7 @@ export async function addOrUpdateRapport(projetId: string, rapport: RapportMensu
     projet.rapports.sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  const label = rapport.mois.substring(0, 3).toUpperCase() + '/' + rapport.mois.slice(-2);
+  const label = getMoisLabel(rapport.mois) + '/' + rapport.mois.slice(-2);
   const point = { date: label, montantCommandesHT: rapport.montantTotalCommandesHT, montantFacturesHT: rapport.montantTotalFacturesHT };
   const hIdx = projet.historiqueChart.findIndex((h) => h.date === label);
   if (hIdx >= 0) projet.historiqueChart[hIdx] = point;
