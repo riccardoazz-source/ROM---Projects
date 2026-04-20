@@ -7,22 +7,6 @@ export const dynamic = 'force-dynamic';
 
 interface PageProps { params: { token: string } }
 
-function RomLogo() {
-  return (
-    <svg width="80" height="24" viewBox="0 0 90 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="0" y="22" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="22"
-        letterSpacing="3" fill="#1C3D54">ROM</text>
-      <rect x="58" y="4" width="2" height="20" fill="#2589A8" rx="1" />
-      <g transform="translate(64, 2)">
-        {[0,3,6,9,12,15,18].map((y, i) => (
-          <rect key={i} x={i % 2 === 0 ? 0 : 1} y={y} width={14 - i * 0.5} height="2.2"
-            fill={i % 2 === 0 ? '#2589A8' : '#1C6A87'} rx="0.5" />
-        ))}
-      </g>
-    </svg>
-  );
-}
-
 export default async function PartageProjetPage({ params }: PageProps) {
   const projet = await getProjetByToken(params.token);
   if (!projet) notFound();
@@ -52,7 +36,8 @@ export default async function PartageProjetPage({ params }: PageProps) {
       {/* Public header — no sidebar, no admin actions. h-14 = 3.5rem = 49px → nav sticky top-14 */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
-          <RomLogo />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-ROM-grand-nouveau-acro.png" alt="ROM" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
           <div className="flex items-center gap-3 min-w-0">
             <div className="hidden sm:block text-right">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Vue partagée</p>
@@ -81,7 +66,7 @@ export default async function PartageProjetPage({ params }: PageProps) {
       </div>
 
       <div className="text-center py-6 text-xs text-gray-400">
-        Vue partagée en lecture seule · <span className="font-semibold text-rom-700">ROM — Roux Oeuvre Maitrise</span>
+        Vue partagée in sola lettura · <span className="font-semibold text-rom-700">ROM — Roux Oeuvre Maitrise</span>
       </div>
     </div>
   );

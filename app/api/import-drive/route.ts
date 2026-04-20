@@ -50,7 +50,7 @@ async function processFolder(
   folder: { id: string; name: string },
   apiKey: string,
 ): Promise<{ ok: boolean; msg: string }> {
-  const { nom, client, id, termine } = folderParts(folder.name);
+  const { nom, client, id, termine: termineFolder } = folderParts(folder.name);
 
   // List PDFs
   const pdfsRes = await driveGet(
@@ -122,6 +122,8 @@ async function processFolder(
     rapports: [],
     historiqueChart: [],
   };
+  const TERMINE_RE = /[\s\-–]*termin[ée]s?\.?/i;
+  const termine = termineFolder || TERMINE_RE.test(latest.name);
   projet.statut = termine ? 'termine' : 'en_cours';
   projet.rapports = [rapport];
 

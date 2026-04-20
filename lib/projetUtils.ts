@@ -58,13 +58,11 @@ export function prepareChartData(projet: Projet, rapport: RapportMensuel): Histo
 
 const FAKE_RE = /\d{2}\/\d{2}\/20\d{2}|\d+%\d+%/;
 const FAKE_COL_RE = /montant\s+ttc|retenue\s+de\s+gar|validation\s+amo|date\s+facture|n°\s+facture/i;
-const GENERIC_COL_RE = /^montant\s+\d+$/i; // "Montant 1", "Montant 2" etc. = parser fallback names
 
 export function checkBudget(rapport: RapportMensuel): { budgetExists: boolean; budgetValid: boolean } {
   const budgetExists = !!(rapport.budget && rapport.budget.lignes.length > 0);
   const budgetValid = budgetExists &&
     !rapport.budget!.colonnes.some(c => FAKE_COL_RE.test(c)) &&
-    !rapport.budget!.colonnes.some(c => GENERIC_COL_RE.test(c)) &&
     rapport.budget!.lignes.filter(l => FAKE_RE.test(l.libelle)).length === 0;
   return { budgetExists, budgetValid };
 }

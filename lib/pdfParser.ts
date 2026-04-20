@@ -261,10 +261,14 @@ function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<stri
         continue;
       }
 
-      // Lot text = text between the previous amount end and this société start
-      const rawLot = line.slice(prevEnd, bestIdx)
-        .replace(AMT_INLINE, '')   // strip stray amounts (e.g. from a previous column)
-        .replace(/\s+/g, ' ').trim();
+      // Lot text = text between the previous amount end and this société start.
+      // If an unknown company+amount appears in this range (company not in knownSocietes),
+      // skip past its amount to extract the real lot label for the current société.
+      const rawSlice = line.slice(prevEnd, bestIdx);
+      const amtMatches = Array.from(rawSlice.matchAll(new RegExp(AMT_INLINE.source, 'g')));
+      const lastAmt = amtMatches[amtMatches.length - 1];
+      const lotFrom = lastAmt ? lastAmt.index! + lastAmt[0].length : 0;
+      const rawLot = rawSlice.slice(lotFrom).replace(/\s+/g, ' ').trim();
 
       if (!result.has(bestSociete)) result.set(bestSociete, []);
       result.get(bestSociete)!.push(rawLot);
@@ -529,13 +533,12 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Strategy: count ALL lines containing a DD/MM/YYYY date pattern.
   // A real budget table has ≤2 date references (e.g. the title "Budget - Mars 2026").
   // A factures section has one date per invoice row → many date-containing lines.
-  const BUDGET_KEYWORDS_RE = /engag[ée]|coûts futurs|reste à facturer|pr[ée]visionnel|al[ée]as|impr[ée]vus|pr[ée]vision|d[ée]penses pr[ée]v/i;
+  const BUDGET_KEYWORDS_RE = /engag[ée]|coûts futurs|reste à facturer|pr[ée]visionnel|al[ée]as|impr[ée]vus|pr[ée]vision|d[ée]penses pr[ée]v|pr[ée]vus|montant total|désignation|intitulé|libellé/i;
   const FACTURE_DATE_RE = /\d{2}\/\d{2}\/\d{4}/;
   const dateLineCount = lines.filter(l => FACTURE_DATE_RE.test(l)).length;
   if (dateLineCount > 2) return undefined;
-  // Budget keywords must appear in the first 40 lines (header / column labels area)
-  const checkLines = lines.slice(0, Math.min(40, lines.length));
-  if (!BUDGET_KEYWORDS_RE.test(checkLines.join(' '))) return undefined;
+  // Budget keywords can appear anywhere in the section
+  if (!BUDGET_KEYWORDS_RE.test(lines.join(' '))) return undefined;
 
   const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement)\b/i;
   const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
