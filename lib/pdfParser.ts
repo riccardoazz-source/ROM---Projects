@@ -540,11 +540,12 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Budget keywords can appear anywhere in the section
   if (!BUDGET_KEYWORDS_RE.test(lines.join(' '))) return undefined;
 
-  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement)\b/i;
-  const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
-  // Extended amount pattern: also matches integers with space-separated thousands (no decimal)
-  const AMT_BUDGET = '(?:[1-9]\\d{0,2}|0)(?: \\d{3})*(?:,\\d{1,2})?';
+  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement|intitulés?\s*total\s*ht|dce\s+ind\.?\s*\d*\s*entreprise|programme\s+aps|estimation\s*$|conception\s+execution|entreprise\s+marche)/i;
+  // Match amounts that are clearly budget values: either have decimal comma OR use space-grouped
+  // thousands (≥ 1 000). Plain integers "1", "02", "15" are lot numbers, not budget amounts.
+  const AMT_BUDGET = '(?:[1-9]\\d{0,2}(?: \\d{3})+(?:,\\d{1,2})?|(?:[1-9]\\d{0,2}|0),\\d{1,2})';
   const AMT_RE_B = new RegExp(AMT_BUDGET, 'g');
+  const TOTAL_RE = /^(total|sous-total|sous total|aléas|imprévus|r[eé]serve)\b/i;
 
   function getAmounts(line: string): number[] {
     AMT_RE_B.lastIndex = 0;
@@ -552,15 +553,15 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     let m: RegExpExecArray | null;
     while ((m = AMT_RE_B.exec(line)) !== null) {
       const after = line[m.index + m[0].length];
-      if (after === '%' || after === ',') continue; // skip percentages and decimal continuations
+      if (after === '%') continue;
       const val = parseMontant(m[0]);
-      if (val > 0) amts.push(val); // skip zeros (likely not real amounts)
+      if (val > 0) amts.push(val);
     }
     return amts;
   }
 
   function getLibelle(line: string): string {
-    let r = line.replace(new RegExp(AMT + '%?', 'g'), '');
+    let r = line.replace(AMT_RE_B, '').replace(/\d+\s*%/g, '');
     r = r.replace(/(?:^|\s)-(?:\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
     return r.replace(/[.:,;]+$/, '').trim();
   }
@@ -586,12 +587,13 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Known French budget vocabulary patterns, in priority order
   const BUDGET_VOCAB_PATTERNS: RegExp[] = [
     /Désignation|Intitulé|Libellé|Prestation/i,
+    /Programme|APS|APD|DCE(?:\s+Ind\.?\s*\d*)?|MARCHE|TS\b|Estimation|Entreprise/,
     /(?:Coût|Montant|Dépenses?)\s*(?:prévisionnel|prévu|total|initial)s?/i,
     /(?:Coûts?|Montants?|Dépenses?)\s*(?:engagés?|réalisés?|commandés?|fact[uo]rés?)/i,
     /Reste\s+à\s+(?:engager|facturer|dépenser|réaliser|commander)/i,
     /(?:Aléas?|Imprévus?|Réserve)s?/i,
     /Disponible/i,
-    /Total\s+(?:prévisionnel|général)/i,
+    /Total\s+(?:prévisionnel|général|HT)/i,
     /(?:Écart|Solde)/i,
   ];
 
@@ -642,20 +644,35 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
   if (maxAmts === 0) return undefined;
 
+  // Deduplicate repeated header names (e.g. "Total HT" appearing N times) by numbering
+  const seen = new Map<string, number>();
+  const dedupedHeaders = headerParts.map(h => {
+    const key = h.toLowerCase().trim();
+    const count = (seen.get(key) ?? 0) + 1;
+    seen.set(key, count);
+    return count > 1 && seen.get(key)! > 1 ? `${h} ${count}` : h;
+  });
+
   // Build colonnes (trim or pad to maxAmts)
-  const colonnes: string[] = headerParts.slice(0, maxAmts);
+  const colonnes: string[] = dedupedHeaders.slice(0, maxAmts);
   while (colonnes.length < maxAmts) colonnes.push(`Montant ${colonnes.length + 1}`);
 
   // Parse data rows
   const lignes: BudgetLigne[] = [];
+  // Lines that are only repeated "Total HT" or header concatenations are noise
+  const HEADER_NOISE = /^(?:\s*(?:total\s*ht|intitulés?|programme|aps|apd|dce\s*ind\.?\s*\d*|marche|ts|entreprise|estimation|conception|execution)\s*){2,}$/i;
+
   for (let i = dataStartIdx; i < lines.length; i++) {
     const line = lines[i];
     if (!line || SKIP.test(line)) continue;
     if (/^budget\s*$/i.test(line) || /^budget\s*[-–]/i.test(line)) continue;
+    if (HEADER_NOISE.test(line)) continue;
 
     const amts = getAmounts(line);
     const libelle = getLibelle(line);
     if (!libelle && amts.length === 0) continue;
+    // Skip lines whose libelle is pure header noise even after amount-stripping
+    if (HEADER_NOISE.test(libelle)) continue;
 
     const type: BudgetLigne['type'] =
       amts.length === 0 ? 'section' :

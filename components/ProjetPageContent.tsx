@@ -94,13 +94,6 @@ export default function ProjetPageContent({ rapport, chartData, budgetExists, bu
                   </div>
                   <ProgressBar value={rapport.pourcentageAvancementTotal} size="md" color="blue" />
                 </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-gray-600">Taux de facturation</span>
-                    <span className="font-bold text-orange-600">{pctFacturation}%</span>
-                  </div>
-                  <ProgressBar value={pctFacturation} size="md" color="orange" />
-                </div>
               </div>
             </div>
           </div>

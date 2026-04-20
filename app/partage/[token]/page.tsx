@@ -24,7 +24,6 @@ export default async function PartageProjetPage({ params }: PageProps) {
   const navSections = [
     { id: 'bordereau', label: 'Bordereau' },
     { id: 'recap', label: 'Récapitulatif' },
-    { id: 'evolution', label: 'Évolution' },
     ...(budgetExists ? [{ id: 'budget', label: 'Budget' }] : []),
     { id: 'avancement', label: 'Avancement' },
     { id: 'commandes', label: 'Commandes' },
