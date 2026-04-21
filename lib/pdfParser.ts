@@ -556,7 +556,11 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     while ((m = AMT_RE_B.exec(line)) !== null) {
       const after = line[m.index + m[0].length];
       if (after === '%') continue;
+      // Skip quantities/coefficients ≤ 100 that immediately follow a letter (no space before)
+      // e.g. "GBL1,00" (Qt=1) or "NORTEC18,00" — not monetary amounts
+      const before = m.index > 0 ? line[m.index - 1] : ' ';
       const val = parseMontant(m[0]);
+      if (val <= 100 && /[a-zA-ZÀ-ÿ]/.test(before)) continue;
       if (val > 0) amts.push(val);
     }
     return amts;
@@ -582,63 +586,12 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     startIdx = i + 1;
   }
 
-  // Detect column header lines (no amounts, before first data row)
-  const headerParts: string[] = [];
+  // ── Pass 1: determine dataStartIdx (first data line) and maxAmts ────────────
   let dataStartIdx = startIdx;
-
-  // Known French budget vocabulary patterns, in priority order
-  const BUDGET_VOCAB_PATTERNS: RegExp[] = [
-    /Désignation|Intitulé|Libellé|Prestation/i,
-    /Programme|APS|APD|DCE(?:\s+Ind\.?\s*\d*)?|MARCHE|TS\b|Estimation|Entreprise/,
-    /(?:Coût|Montant|Dépenses?)\s*(?:prévisionnel|prévu|total|initial)s?/i,
-    /(?:Coûts?|Montants?|Dépenses?)\s*(?:engagés?|réalisés?|commandés?|fact[uo]rés?)/i,
-    /Reste\s+à\s+(?:engager|facturer|dépenser|réaliser|commander)/i,
-    /(?:Aléas?|Imprévus?|Réserve)s?/i,
-    /Disponible/i,
-    /Total\s+(?:prévisionnel|général|HT)/i,
-    /(?:Écart|Solde)/i,
-  ];
-
-  for (let i = startIdx; i < Math.min(startIdx + 8, lines.length); i++) {
-    const l = lines[i];
-    if (!l || SKIP.test(l)) continue;
-    const amts = getAmounts(l);
-    if (amts.length > 0) { dataStartIdx = i; break; }
-
-    // 1. Try splitting on 2+ spaces
-    let parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
-
-    // 2. If that yields < 2 parts, try tab splitting
-    if (parts.length < 2) {
-      const tabParts = l.split(/\t/).map(s => s.trim()).filter(Boolean);
-      if (tabParts.length >= 2) parts = tabParts;
-    }
-
-    // 3. If still < 2 parts, scan for known budget vocabulary terms in order of occurrence
-    if (parts.length < 2) {
-      const matches: Array<{ index: number; text: string }> = [];
-      for (const pattern of BUDGET_VOCAB_PATTERNS) {
-        const re = new RegExp(pattern.source, 'gi');
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(l)) !== null) {
-          matches.push({ index: m.index, text: m[0] });
-        }
-      }
-      if (matches.length >= 2) {
-        matches.sort((a, b) => a.index - b.index);
-        parts = matches.map(m => m.text);
-      }
-    }
-
-    if (parts.length >= 2) {
-      // Skip first part if it's a row-label header like "Intitulés", "Désignation"
-      const toAdd = /^(intitulé|libellé|désignation|prestation)/i.test(parts[0]) ? parts.slice(1) : parts;
-      headerParts.push(...toAdd);
-    }
-    dataStartIdx = i + 1;
+  for (let i = startIdx; i < lines.length; i++) {
+    if (!lines[i] || SKIP.test(lines[i])) continue;
+    if (getAmounts(lines[i]).length > 0) { dataStartIdx = i; break; }
   }
-
-  // Find max amount columns from all data rows
   let maxAmts = 0;
   for (let i = dataStartIdx; i < lines.length; i++) {
     const n = getAmounts(lines[i]).length;
@@ -646,18 +599,69 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
   if (maxAmts === 0) return undefined;
 
-  // Deduplicate repeated header names (e.g. "Total HT" appearing N times) by numbering
+  // ── Pass 2: find the best header line anywhere in the section ────────────────
+  // Strategy:
+  //  a) Multi-space split (catches MIRROR-style "Coûts futurs  Facturés  …")
+  //  b) CamelCase split on lowercase→uppercase transitions
+  //     ("IntitulésGombertLibertéTotal HT" → ["Intitulés","Gombert","Liberté","Total HT"])
+  //  c) Known vocabulary extraction
+  // Pick the candidate with most parts closest to maxAmts.
+  const ROW_LABEL_RE = /^(intitulé|libellé|désignation|prestation)\b/i;
+  const DATE_FRAG_RE = /^\d{1,2}\s+\w+\s+\d{2,4}$|^\d{2}\/\d{2}\/\d{4}$/;
+
+  function extractHeaderParts(l: string): string[] {
+    // a) multi-space
+    let parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return parts;
+
+    // b) tab
+    const tabParts = l.split(/\t/).map(s => s.trim()).filter(Boolean);
+    if (tabParts.length >= 2) return tabParts;
+
+    // c) CamelCase split (lowercase→uppercase boundary, Unicode-aware)
+    const camels = l.split(/(?<=\p{Ll})(?=\p{Lu})/u).map(s => s.trim()).filter(Boolean);
+    if (camels.length >= 2) return camels;
+
+    // d) single token: return as-is if non-empty
+    return l.trim() ? [l.trim()] : [];
+  }
+
+  // Scan ALL non-data lines (before AND after data) for header candidates
+  let bestParts: string[] = [];
+  let bestScore = -1;
+
+  for (let i = startIdx; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l || SKIP.test(l)) continue;
+    if (/^budget\s*$/i.test(l) || /^budget\s*[-–]/i.test(l)) continue;
+    if (getAmounts(l).length > 0) continue; // skip data rows
+
+    const raw = extractHeaderParts(l);
+    // Filter date fragments and strip row-label prefix
+    const filtered = raw.filter(p => !DATE_FRAG_RE.test(p));
+    const parts = ROW_LABEL_RE.test(filtered[0] ?? '') ? filtered.slice(1) : filtered;
+    if (parts.length === 0) continue;
+
+    // Score: prefer lines with count close to maxAmts
+    const score = parts.length - Math.abs(parts.length - maxAmts);
+    if (score > bestScore) { bestScore = score; bestParts = parts; }
+  }
+
+  // Deduplicate and pad
   const seen = new Map<string, number>();
-  const dedupedHeaders = headerParts.map(h => {
+  const dedupedHeaders = bestParts.map(h => {
     const key = h.toLowerCase().trim();
     const count = (seen.get(key) ?? 0) + 1;
     seen.set(key, count);
-    return count > 1 && seen.get(key)! > 1 ? `${h} ${count}` : h;
+    return count > 1 ? `${h} ${count}` : h;
   });
-
-  // Build colonnes (trim or pad to maxAmts)
   const colonnes: string[] = dedupedHeaders.slice(0, maxAmts);
-  while (colonnes.length < maxAmts) colonnes.push(`Montant ${colonnes.length + 1}`);
+  // Fallback names that are more meaningful than "Montant N"
+  const FALLBACK = ['Budget', 'Engagés', 'Facturés', 'Disponible', 'Reste', 'Écart'];
+  while (colonnes.length < maxAmts) {
+    const fb = FALLBACK[colonnes.length] ?? `Montant ${colonnes.length + 1}`;
+    colonnes.push(fb);
+  }
 
   // Parse data rows
   const lignes: BudgetLigne[] = [];

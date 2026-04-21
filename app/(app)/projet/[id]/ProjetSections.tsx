@@ -48,7 +48,7 @@ function CommandesSubSection({ commandes, type, label }: {
             {filtered.map((c, i) => (
               <tr key={i}>
                 <td className="font-medium text-gray-900 text-xs">{c.societe}</td>
-                <td className="text-gray-500 hidden sm:table-cell">{c.lot}</td>
+                <td className="text-gray-500 hidden sm:table-cell">{c.lot || '—'}</td>
                 <td className="text-right font-medium whitespace-nowrap">{formatMontantHT(c.montantHT)}</td>
                 <td className="text-right hidden sm:table-cell">
                   <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-medium'}>
