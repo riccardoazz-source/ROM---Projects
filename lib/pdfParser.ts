@@ -618,8 +618,9 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     const tabParts = l.split(/\t/).map(s => s.trim()).filter(Boolean);
     if (tabParts.length >= 2) return tabParts;
 
-    // c) CamelCase split (lowercase→uppercase boundary, Unicode-aware)
-    const camels = l.split(/(?<=\p{Ll})(?=\p{Lu})/u).map(s => s.trim()).filter(Boolean);
+    // c) CamelCase split: split at lowercase→uppercase boundary
+    // Uses explicit ranges instead of \p{Ll}/\p{Lu} to avoid requiring the `u` flag
+    const camels = l.split(/(?<=[a-zà-öø-ÿ])(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
     if (camels.length >= 2) return camels;
 
     // d) single token: return as-is if non-empty

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, CheckCircle, XCircle, ExternalLink, Download } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, ExternalLink, Download, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { Facture } from '@/types';
 
@@ -17,13 +17,44 @@ function formatMontant(value: number): string {
   return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
 }
 
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function dateToMonthKey(d: string): string {
+  if (!d || d.length < 10) return '';
+  return d.slice(3, 10); // "MM/YYYY" from "DD/MM/YYYY"
+}
+
+function monthKeyToLabel(key: string): string {
+  const [mm, yyyy] = key.split('/');
+  const idx = parseInt(mm, 10) - 1;
+  return idx >= 0 && idx < 12 ? `${MONTHS_FR[idx]} ${yyyy}` : key;
+}
+
+function sortMonthKeys(keys: string[]): string[] {
+  return [...keys].sort((a, b) => {
+    const [ma, ya] = a.split('/').map(Number);
+    const [mb, yb] = b.split('/').map(Number);
+    return (ya !== yb ? ya - yb : ma - mb);
+  });
+}
+
 export default function FacturesClient({ factures }: { factures: FactureResult[] }) {
   const [search, setSearch] = useState('');
   const [filterProjet, setFilterProjet] = useState('');
   const [filterSociete, setFilterSociete] = useState('');
+  const [filterDateAMO, setFilterDateAMO] = useState('');
 
   const projets = Array.from(new Set(factures.map(f => f.projetNom))).sort();
-  const societes = Array.from(new Set(factures.map(f => f.societe))).sort();
+
+  // Cascade: société options depend on selected projet
+  const facturesForProjet = filterProjet ? factures.filter(f => f.projetNom === filterProjet) : factures;
+  const societes = Array.from(new Set(facturesForProjet.map(f => f.societe))).sort();
+
+  // Cascade: date AMO options depend on selected projet + société
+  const facturesForSociete = filterSociete ? facturesForProjet.filter(f => f.societe === filterSociete) : facturesForProjet;
+  const datesAMO = sortMonthKeys(
+    Array.from(new Set(facturesForSociete.map(f => dateToMonthKey(f.dateValidationAMO)).filter(Boolean)))
+  );
 
   const filtered = factures.filter(f => {
     const q = search.toLowerCase();
@@ -34,11 +65,16 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
       f.client.toLowerCase().includes(q);
     const matchProjet = !filterProjet || f.projetNom === filterProjet;
     const matchSociete = !filterSociete || f.societe === filterSociete;
-    return matchSearch && matchProjet && matchSociete;
+    const matchDate = !filterDateAMO || dateToMonthKey(f.dateValidationAMO) === filterDateAMO;
+    return matchSearch && matchProjet && matchSociete && matchDate;
   });
 
   const totalHT = filtered.reduce((s, f) => s + f.montantHT, 0);
   const totalTTC = filtered.reduce((s, f) => s + f.montantTTC, 0);
+
+  const hasFilters = !!(search || filterProjet || filterSociete || filterDateAMO);
+
+  const reset = () => { setSearch(''); setFilterProjet(''); setFilterSociete(''); setFilterDateAMO(''); };
 
   const exportCSV = () => {
     const headers = ['Date facture', 'N° Facture', 'Société', 'Projet', 'Client', 'Date validation AMO', 'Montant HT', 'Montant TTC', 'Retenue', '% Commande', '% Avancement'];
@@ -48,7 +84,7 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
       f.retenueGarantie.toFixed(2), `${f.pourcentageFactureSurCommande}%`, `${f.pourcentageAvancementTotal}%`
     ]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(';')).join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'factures.csv'; a.click();
     URL.revokeObjectURL(url);
@@ -89,23 +125,42 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
               </button>
             )}
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select value={filterProjet} onChange={e => setFilterProjet(e.target.value)}
-                className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
-                <option value="">Tous les projets</option>
-                {projets.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <select value={filterSociete} onChange={e => setFilterSociete(e.target.value)}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
+          <div className="flex gap-3 flex-wrap items-center">
+            <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            {/* Projet */}
+            <select
+              value={filterProjet}
+              onChange={e => { setFilterProjet(e.target.value); setFilterSociete(''); setFilterDateAMO(''); }}
+              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
+            >
+              <option value="">Tous les projets</option>
+              {projets.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            {/* Société — filtered by projet */}
+            <select
+              value={filterSociete}
+              onChange={e => { setFilterSociete(e.target.value); setFilterDateAMO(''); }}
+              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
+            >
               <option value="">Toutes les sociétés</option>
               {societes.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            {(search || filterProjet || filterSociete) && (
-              <button onClick={() => { setSearch(''); setFilterProjet(''); setFilterSociete(''); }}
-                className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1">
+            {/* Date validation AMO — filtered by projet + société */}
+            <div className="relative flex items-center">
+              <Calendar className="absolute left-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <select
+                value={filterDateAMO}
+                onChange={e => setFilterDateAMO(e.target.value)}
+                className="border border-gray-200 rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
+              >
+                <option value="">Toutes les dates AMO</option>
+                {datesAMO.map(d => (
+                  <option key={d} value={d}>{monthKeyToLabel(d)}</option>
+                ))}
+              </select>
+            </div>
+            {hasFilters && (
+              <button onClick={reset} className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1">
                 <XCircle className="w-4 h-4" /> Réinitialiser
               </button>
             )}

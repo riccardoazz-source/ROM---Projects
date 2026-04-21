@@ -38,10 +38,15 @@ const TYPE_COLORS: Record<string, string> = {
 export default function CommandesClient({ commandes }: { commandes: CommandeResult[] }) {
   const [search, setSearch] = useState('');
   const [filterProjet, setFilterProjet] = useState('');
+  const [filterLot, setFilterLot] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterAvancement, setFilterAvancement] = useState('');
 
   const projets = Array.from(new Set(commandes.map(c => c.projetNom))).sort();
+
+  // LOT options cascade on projet selection
+  const commandesForProjet = filterProjet ? commandes.filter(c => c.projetNom === filterProjet) : commandes;
+  const lots = Array.from(new Set(commandesForProjet.map(c => c.lot).filter(Boolean))).sort();
 
   const filtered = commandes.filter(c => {
     const q = search.toLowerCase();
@@ -50,13 +55,14 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
       c.lot.toLowerCase().includes(q) ||
       c.projetNom.toLowerCase().includes(q);
     const matchProjet = !filterProjet || c.projetNom === filterProjet;
+    const matchLot = !filterLot || c.lot === filterLot;
     const matchType = !filterType || c.type === filterType;
     const matchAvance =
       filterAvancement === '' ? true :
       filterAvancement === 'done' ? c.pourcentageAvancement === 100 :
       filterAvancement === 'partial' ? c.pourcentageAvancement > 0 && c.pourcentageAvancement < 100 :
       filterAvancement === 'none' ? c.pourcentageAvancement === 0 : true;
-    return matchSearch && matchProjet && matchType && matchAvance;
+    return matchSearch && matchProjet && matchLot && matchType && matchAvance;
   });
 
   const totalHT = filtered.reduce((s, c) => s + c.montantHT, 0);
@@ -110,10 +116,15 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
           </div>
           <div className="flex gap-3 flex-wrap items-center">
             <Filter className="w-4 h-4 text-gray-400" />
-            <select value={filterProjet} onChange={e => setFilterProjet(e.target.value)}
+            <select value={filterProjet} onChange={e => { setFilterProjet(e.target.value); setFilterLot(''); }}
               className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
               <option value="">Tous les projets</option>
               {projets.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filterLot} onChange={e => setFilterLot(e.target.value)}
+              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
+              <option value="">Tous les LOTs / Missions</option>
+              {lots.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
             <select value={filterType} onChange={e => setFilterType(e.target.value)}
               className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
@@ -129,8 +140,8 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
               <option value="partial">En cours (1–99%)</option>
               <option value="none">Non démarré (0%)</option>
             </select>
-            {(search || filterProjet || filterType || filterAvancement) && (
-              <button onClick={() => { setSearch(''); setFilterProjet(''); setFilterType(''); setFilterAvancement(''); }}
+            {(search || filterProjet || filterLot || filterType || filterAvancement) && (
+              <button onClick={() => { setSearch(''); setFilterProjet(''); setFilterLot(''); setFilterType(''); setFilterAvancement(''); }}
                 className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1">
                 <XCircle className="w-4 h-4" /> Réinitialiser
               </button>
