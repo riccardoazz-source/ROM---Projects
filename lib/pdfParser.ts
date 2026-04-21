@@ -586,12 +586,19 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     startIdx = i + 1;
   }
 
-  // ── Pass 1: determine dataStartIdx (first data line) and maxAmts ────────────
+  // ── Pass 1: determine dataStartIdx and collect pre-data header lines ─────────
   let dataStartIdx = startIdx;
+  const preDataLines: string[] = []; // non-amount lines between title and first data row
+
   for (let i = startIdx; i < lines.length; i++) {
     if (!lines[i] || SKIP.test(lines[i])) continue;
     if (getAmounts(lines[i]).length > 0) { dataStartIdx = i; break; }
+    if (!/^budget\s*$/i.test(lines[i]) && !/^budget\s*[-–]/i.test(lines[i])) {
+      preDataLines.push(lines[i]);
+    }
   }
+
+  // ── Pass 2: maxAmts ───────────────────────────────────────────────────────────
   let maxAmts = 0;
   for (let i = dataStartIdx; i < lines.length; i++) {
     const n = getAmounts(lines[i]).length;
@@ -599,31 +606,31 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
   if (maxAmts === 0) return undefined;
 
-  // ── Pass 2: find the best header line anywhere in the section ────────────────
-  // Strategy:
-  //  a) Multi-space split (catches MIRROR-style "Coûts futurs  Facturés  …")
-  //  b) CamelCase split on lowercase→uppercase transitions
-  //     ("IntitulésGombertLibertéTotal HT" → ["Intitulés","Gombert","Liberté","Total HT"])
-  //  c) Known vocabulary extraction
-  // Pick the candidate with most parts closest to maxAmts.
+  // ── Pass 3: find the best header line anywhere in the section ────────────────
+  // Strategy A) Multi-space split ("Coûts futurs  Facturés  Reste à facturer  …")
+  // Strategy B) Tab split
+  // Strategy C) CamelCase split ("IntitulésGombertLibertéTotal HT" → real names)
+  // Strategy D) Consecutive pre-data single lines each = one column header
+  //   (handles PDFs where pdf-parse puts each header cell on its own line)
+  // Pick the candidate whose count is closest to maxAmts.
   const ROW_LABEL_RE = /^(intitulé|libellé|désignation|prestation)\b/i;
   const DATE_FRAG_RE = /^\d{1,2}\s+\w+\s+\d{2,4}$|^\d{2}\/\d{2}\/\d{4}$/;
 
   function extractHeaderParts(l: string): string[] {
-    // a) multi-space
+    // A) multi-space
     let parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
     if (parts.length >= 2) return parts;
 
-    // b) tab
+    // B) tab
     const tabParts = l.split(/\t/).map(s => s.trim()).filter(Boolean);
     if (tabParts.length >= 2) return tabParts;
 
-    // c) CamelCase split: split at lowercase→uppercase boundary
+    // C) CamelCase split: split at lowercase→uppercase boundary
     // Uses explicit ranges instead of \p{Ll}/\p{Lu} to avoid requiring the `u` flag
     const camels = l.split(/(?<=[a-zà-öø-ÿ])(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
     if (camels.length >= 2) return camels;
 
-    // d) single token: return as-is if non-empty
+    // single token
     return l.trim() ? [l.trim()] : [];
   }
 
@@ -638,14 +645,24 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     if (getAmounts(l).length > 0) continue; // skip data rows
 
     const raw = extractHeaderParts(l);
-    // Filter date fragments and strip row-label prefix
     const filtered = raw.filter(p => !DATE_FRAG_RE.test(p));
     const parts = ROW_LABEL_RE.test(filtered[0] ?? '') ? filtered.slice(1) : filtered;
     if (parts.length === 0) continue;
 
-    // Score: prefer lines with count close to maxAmts
     const score = parts.length - Math.abs(parts.length - maxAmts);
     if (score > bestScore) { bestScore = score; bestParts = parts; }
+  }
+
+  // Strategy D: treat each pre-data line as its own column header.
+  // This handles PDFs where pdf-parse puts each header cell on a separate line.
+  // Only applied when strategies A-C haven't found a good match (bestScore ≤ 0).
+  if (bestScore <= 0 && preDataLines.length >= 2) {
+    const filtered = preDataLines.filter(l => !DATE_FRAG_RE.test(l));
+    const candidate = ROW_LABEL_RE.test(filtered[0] ?? '') ? filtered.slice(1) : filtered;
+    if (candidate.length >= 2) {
+      const score = candidate.length - Math.abs(candidate.length - maxAmts);
+      if (score > bestScore) { bestScore = score; bestParts = candidate; }
+    }
   }
 
   // Deduplicate and pad
