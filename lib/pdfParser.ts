@@ -220,27 +220,27 @@ function parseValeurEntries(sectionText: string): Map<string, number> {
 
 /**
  * Parse LOT table: returns societe → ordered array of lots (one per occurrence).
- * PDF column order is LOT/Mission | Société | Montant HT, so when pdf-parse
- * concatenates columns, the lot text appears BEFORE the société name in each line.
- * We process line by line, finding (lot_text, société, amount) triplets.
+ * PDF column order is Société | Montant HT | LOT/Mission. When pdf-parse
+ * concatenates a row, each entry appears as: SOCIÉTÉ AMOUNT LOT_TEXT [next entry...]
+ * We collect all (société, amtEnd) pairs first, then assign LOT = text from
+ * the amount-end of entry[i] to the société-start of entry[i+1].
  */
 function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<string, string[]> {
   const result = new Map<string, string[]>();
   if (!sectionText || knownSocietes.length === 0) return result;
   const sorted = [...knownSocietes].sort((a, b) => b.length - a.length);
-  const AMT_INLINE = /(?:[1-9]\d{0,2}|0)(?: \d{3})*,\d{2}/g;
 
   const lines = sectionText.split('\n').map(l => l.trim()).filter(Boolean);
 
   for (const line of lines) {
     if (SKIP_LINE_RE.test(line)) continue;
 
-    // Within each line find all (lot, société, amount) triplets left-to-right
+    // Collect (société, socStart, amtEnd) triples in left-to-right order
+    const entries: Array<{ societe: string; socStart: number; amtEnd: number }> = [];
     let searchFrom = 0;
-    let prevEnd = 0;
 
     while (searchFrom < line.length) {
-      // Find the earliest société at or after searchFrom (longest wins on tie)
+      // Find the earliest known société at or after searchFrom
       let bestIdx = -1;
       let bestSociete = '';
       for (const societe of sorted) {
@@ -253,7 +253,7 @@ function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<stri
       }
       if (bestIdx === -1) break;
 
-      // Amount must follow the société name directly (with optional spaces)
+      // Amount must follow the société name (Société | Montant HT | LOT column order)
       const after = line.slice(bestIdx + bestSociete.length);
       const amtMatch = after.match(/^\s*((?:[1-9]\d{0,2}|0)(?: \d{3})*,\d{2})/);
       if (!amtMatch) {
@@ -261,20 +261,22 @@ function parseLotEntries(sectionText: string, knownSocietes: string[]): Map<stri
         continue;
       }
 
-      // Lot text = text between the previous amount end and this société start.
-      // If an unknown company+amount appears in this range (company not in knownSocietes),
-      // skip past its amount to extract the real lot label for the current société.
-      const rawSlice = line.slice(prevEnd, bestIdx);
-      const amtMatches = Array.from(rawSlice.matchAll(new RegExp(AMT_INLINE.source, 'g')));
-      const lastAmt = amtMatches[amtMatches.length - 1];
-      const lotFrom = lastAmt ? lastAmt.index! + lastAmt[0].length : 0;
-      const rawLot = rawSlice.slice(lotFrom).replace(/\s+/g, ' ').trim();
+      entries.push({
+        societe: bestSociete,
+        socStart: bestIdx,
+        amtEnd: bestIdx + bestSociete.length + amtMatch[0].length,
+      });
+      searchFrom = entries[entries.length - 1].amtEnd;
+    }
 
-      if (!result.has(bestSociete)) result.set(bestSociete, []);
-      result.get(bestSociete)!.push(rawLot);
+    // Assign LOT: text from entry[i].amtEnd → entry[i+1].socStart (or end of line)
+    for (let i = 0; i < entries.length; i++) {
+      const { societe, amtEnd } = entries[i];
+      const nextStart = i + 1 < entries.length ? entries[i + 1].socStart : line.length;
+      const rawLot = line.slice(amtEnd, nextStart).replace(/\s+/g, ' ').trim();
 
-      prevEnd = bestIdx + bestSociete.length + amtMatch[0].length;
-      searchFrom = prevEnd;
+      if (!result.has(societe)) result.set(societe, []);
+      result.get(societe)!.push(rawLot);
     }
   }
   return result;
