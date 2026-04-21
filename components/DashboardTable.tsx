@@ -120,8 +120,8 @@ export default function DashboardTable({ rows }: { rows: DashboardRow[] }) {
               className="pl-8 pr-3 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg
                          text-white focus:outline-none focus:bg-white/20 appearance-none w-36"
             >
-              <option value="">Tous les mois</option>
-              {months.map(m => <option key={m} value={m}>{monthKeyToLabel(m)}</option>)}
+              <option value="" className="text-slate-800">Tous les mois</option>
+              {months.map(m => <option key={m} value={m} className="text-slate-800">{monthKeyToLabel(m)}</option>)}
             </select>
           </div>
           <div className="relative">
