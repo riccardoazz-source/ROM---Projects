@@ -656,8 +656,11 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Strategy D: treat each pre-data line as its own column header.
   // This handles PDFs where pdf-parse puts each header cell on a separate line.
   // Only applied when strategies A-C haven't found a good match (bestScore ≤ 0).
+  // Skip apparent span/group headers: all-uppercase, ≥ 7 chars (e.g. CONCEPTION, EXECUTION,
+  // TRAVAUX, HONORAIRES) — short abbreviations like APS, APE, DCE, MARCHE (≤ 6 chars) are kept.
   if (bestScore <= 0 && preDataLines.length >= 2) {
-    const filtered = preDataLines.filter(l => !DATE_FRAG_RE.test(l));
+    const SPAN_HEADER_RE = /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ][A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ\s]{6,}$/;
+    const filtered = preDataLines.filter(l => !DATE_FRAG_RE.test(l) && !SPAN_HEADER_RE.test(l.trim()));
     const candidate = ROW_LABEL_RE.test(filtered[0] ?? '') ? filtered.slice(1) : filtered;
     if (candidate.length >= 2) {
       const score = candidate.length - Math.abs(candidate.length - maxAmts);
@@ -674,7 +677,6 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     return count > 1 ? `${h} ${count}` : h;
   });
   const colonnes: string[] = dedupedHeaders.slice(0, maxAmts);
-  // Fallback names that are more meaningful than "Montant N"
   const FALLBACK = ['Budget', 'Engagés', 'Facturés', 'Disponible', 'Reste', 'Écart'];
   while (colonnes.length < maxAmts) {
     const fb = FALLBACK[colonnes.length] ?? `Montant ${colonnes.length + 1}`;
@@ -707,6 +709,48 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
 
   if (lignes.filter(l => l.type !== 'section').length === 0) return undefined;
+
+  // Semantic reordering: if ALL detected column names are recognized budget vocabulary,
+  // sort columns (and their values) into the standard visual left-to-right order.
+  // This fixes PDFs (like MIRROR) where pdf-parse reads the header row in a non-visual order.
+  // Projects with custom column names (e.g. "Gombert", "Liberté") are left untouched.
+  const COL_RANK: Record<string, number> = {
+    'budget': 0, 'budget initial': 0, 'budget previsionnel': 0, 'budget global': 0,
+    'programme': 1,
+    'aps': 2, 'ape': 3, 'dce': 4,
+    'marche': 5, 'marche initial': 5, 'marche signe': 5,
+    'avenant': 6, 'avenants': 6,
+    'engage': 7, 'engages': 7,
+    'couts futurs': 8,
+    'facture': 9, 'factures': 9,
+    'reste a facturer': 10, 'reste': 10,
+    'disponible': 11, 'ecart': 12,
+    'total ht': 13, 'total': 13, 'total general': 13,
+  };
+  const normCol = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+     .replace(/\.?\s*\d+$/, '').replace(/\./g, '').replace(/\s+/g, ' ').trim();
+  const colRanks = colonnes.map(c => {
+    const k = normCol(c);
+    if (k in COL_RANK) return COL_RANK[k];
+    for (const [key, val] of Object.entries(COL_RANK)) {
+      if (k.startsWith(key) || key.startsWith(k)) return val;
+    }
+    return null;
+  });
+  if (colRanks.every(r => r !== null) && colonnes.length >= 2) {
+    const order = Array.from({ length: colonnes.length }, (_, i) => i)
+      .sort((a, b) => (colRanks[a] as number) - (colRanks[b] as number));
+    if (!order.every((v, i) => v === i)) {
+      const origCols = [...colonnes];
+      for (let i = 0; i < colonnes.length; i++) colonnes[i] = origCols[order[i]];
+      for (const ligne of lignes) {
+        const orig = [...ligne.valeurs];
+        for (let i = 0; i < ligne.valeurs.length; i++) ligne.valeurs[i] = orig[order[i]];
+      }
+    }
+  }
+
   return { titre, colonnes, lignes };
 }
 
