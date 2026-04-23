@@ -686,7 +686,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Parse data rows
   const lignes: BudgetLigne[] = [];
   // Lines that are only repeated "Total HT" or header concatenations are noise
-  const HEADER_NOISE = /^(?:\s*(?:total\s*ht|intitulés?|programme|aps|apd|dce\s*ind\.?\s*\d*|marche|ts|entreprise|estimation|conception|execution)\s*){2,}$/i;
+  const HEADER_NOISE = /^(?:\s*(?:total\s*ht|intitulés?|programme|aps|ape|apd|dce\s*(?:ind\.?)?\s*\d*|marche|ts|entreprise|estimation|conception|execution)\s*){2,}$/i;
 
   for (let i = dataStartIdx; i < lines.length; i++) {
     const line = lines[i];
@@ -880,12 +880,13 @@ export function parseRapportFromPdf(
     const pos = lo.search(/(?:^|\n)budget(?:\s|$|\s*[-–]|\s*pr)/m);
     if (pos === -1) return '';
     const lineStart = searchText[pos] === '\n' ? pos + 1 : pos;
-    // Bound the section: stop at any following major section header so we don't
-    // accidentally pull in the Liste des factures or next page's content.
+    // Bound the section: stop at the next major content section.
+    // Do NOT stop at "Bordereau de transmission" — that is a page-break header
+    // that appears at the top of every PDF page; multi-page budgets must pass through it.
     const rest = lo.slice(lineStart + 6);
     const endPatterns = [
       /\nliste des factures\b/,
-      /\nbordereau de (paiement|transmission)\b/,
+      /\nbordereau de paiement\b/,
       /\ntableau récapitulatif\b/,
       /\ndate facture\b/,
     ];
