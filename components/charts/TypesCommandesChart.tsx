@@ -8,7 +8,11 @@ interface TypesCommandesChartProps {
   divers: number;
 }
 
-const COLORS = ['#1B3A5C', '#ED8936', '#48BB78'];
+const COLOR_MAP: Record<string, string> = {
+  'Honoraires': '#1B3A5C',
+  'Travaux': '#ED8936',
+  'Divers': '#48BB78',
+};
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -49,8 +53,8 @@ export default function TypesCommandesChart({
           paddingAngle={3}
           dataKey="value"
         >
-          {data.map((entry, index) => (
-            <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+          {data.map((entry) => (
+            <Cell key={entry.name} fill={COLOR_MAP[entry.name] ?? '#999'} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />

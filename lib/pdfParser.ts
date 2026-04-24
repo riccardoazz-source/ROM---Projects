@@ -880,22 +880,45 @@ export function parseRapportFromPdf(
     const pos = lo.search(/(?:^|\n)budget(?:\s|$|\s*[-–]|\s*pr)/m);
     if (pos === -1) return '';
     const lineStart = searchText[pos] === '\n' ? pos + 1 : pos;
-    // Bound the section: stop at the next major content section.
-    // Do NOT stop at "Bordereau de transmission" — that is a page-break header
-    // that appears at the top of every PDF page; multi-page budgets must pass through it.
-    const rest = lo.slice(lineStart + 6);
-    const endPatterns = [
-      /\nliste des factures\b/,
-      /\nbordereau de paiement\b/,
-      /\ntableau récapitulatif\b/,
-      /\ndate facture\b/,
-    ];
-    let endOffset = rest.length;
-    for (const ep of endPatterns) {
-      const m = rest.search(ep);
-      if (m !== -1 && m < endOffset) endOffset = m;
+
+    // Patterns that mark a genuine end of the budget section
+    const HARD_END_RE = /\nliste des factures\b|\nbordereau de paiement\b|\ntableau récapitulatif\b|\ndate facture\b/;
+    // "Bordereau de transmission" is just a page-break header; after skipping it we
+    // check whether the content that follows is still budget or a new section.
+    const PAGE_BREAK_RE = /\nbordereau de transmission\b/;
+    // After a page break, these openings signal a new real section (not budget continuation)
+    const NEW_SECTION_START_RE = /^(?:liste des factures|tableau récapitulatif|bordereau de paiement|date facture)\b/i;
+
+    const parts: string[] = [];
+    let cursor = lineStart;
+
+    while (cursor < searchText.length) {
+      const segLo = lo.slice(cursor);
+      const hardEndIdx = segLo.search(HARD_END_RE);
+      const pageBreakIdx = segLo.search(PAGE_BREAK_RE);
+
+      const nextStop = Math.min(
+        hardEndIdx >= 0 ? hardEndIdx : segLo.length,
+        pageBreakIdx >= 0 ? pageBreakIdx : segLo.length,
+      );
+
+      parts.push(searchText.slice(cursor, cursor + nextStop));
+
+      if (hardEndIdx >= 0 && (pageBreakIdx < 0 || hardEndIdx <= pageBreakIdx)) break;
+      if (pageBreakIdx < 0) break;
+
+      // Skip the "Bordereau de transmission" header line entirely
+      const breakLineStart = cursor + pageBreakIdx + 1; // +1 for the \n before "Bordereau"
+      const breakLineEnd = searchText.indexOf('\n', breakLineStart + 'bordereau de transmission'.length);
+      cursor = breakLineEnd >= 0 ? breakLineEnd + 1 : searchText.length;
+
+      // If what follows the break is a new major section, stop collecting
+      const nextContent = searchText.slice(cursor).trimStart();
+      if (NEW_SECTION_START_RE.test(nextContent)) break;
+      // Otherwise continue — this is a budget continuation page
     }
-    return searchText.slice(lineStart, lineStart + 6 + endOffset);
+
+    return parts.join('\n');
   }
 
   const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');
