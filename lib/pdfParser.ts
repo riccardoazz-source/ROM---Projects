@@ -702,12 +702,19 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const lignes: BudgetLigne[] = [];
   // Lines that are only repeated "Total HT" or header concatenations are noise
   const HEADER_NOISE = /^(?:\s*(?:total\s*ht|intitulés?|programme|aps|ape|apd|dce\s*(?:ind\.?)?\s*\d*|marche|ts|entreprise|estimation|conception|execution)\s*){2,}$/i;
+  // Split a spurious subtotal row number glued to the first amount by pdf-parse:
+  // "Sous-total travaux 1" + "0,00" → "Sous-total travaux 10,00" — reinsert the space
+  // so the row number stays in the libellé and the first amount parses as 0,00.
+  function stripSubtotalRowNumber(line: string): string {
+    return line.replace(/^(\s*sous[- ]total\s+\S+\s+)(\d{1,2})(0,\d{2})/i, '$1$2 $3');
+  }
 
   for (let i = dataStartIdx; i < lines.length; i++) {
-    const line = lines[i];
+    let line = lines[i];
     if (!line || SKIP.test(line)) continue;
     if (/^budget\s*$/i.test(line) || /^budget\s*[-–]/i.test(line)) continue;
     if (HEADER_NOISE.test(line)) continue;
+    if (TOTAL_RE.test(line)) line = stripSubtotalRowNumber(line);
 
     const amts = getAmounts(line);
     const libelle = getLibelle(line);
