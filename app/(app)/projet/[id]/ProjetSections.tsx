@@ -22,65 +22,43 @@ const FRENCH_MONTHS = [
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
-function CommandesSubSection({ commandes, type, label }: {
-  commandes: Commande[];
-  type: 'honoraires' | 'travaux' | 'divers';
-  label: string;
-}) {
-  const filtered = commandes.filter((c) => c.type === type);
-  if (filtered.length === 0) return null;
-
+function SectionRows({ commandes, label }: { commandes: Commande[]; label: string }) {
+  const totalHT = commandes.reduce((s, c) => s + c.montantHT, 0);
+  const totalVal = commandes.reduce((s, c) => s + c.valeurHtRestante, 0);
   return (
-    <div>
-      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{label}</h4>
-      <ScrollTableLeft>
-        <table className="rom-table">
-          <thead>
-            <tr>
-              <th>Société</th>
-              <th className="hidden sm:table-cell">LOT / Mission</th>
-              <th className="text-right whitespace-nowrap">Montant HT</th>
-              <th className="text-right whitespace-nowrap hidden sm:table-cell">Valeur restante</th>
-              <th style={{ width: 140 }}>% Avanc.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c, i) => (
-              <tr key={i}>
-                <td className="font-medium text-gray-900 text-xs">{c.societe}</td>
-                <td className="text-gray-500 hidden sm:table-cell">{c.lot || '—'}</td>
-                <td className="text-right font-medium whitespace-nowrap">{formatMontantHT(c.montantHT)}</td>
-                <td className="text-right hidden sm:table-cell">
-                  <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-medium'}>
-                    {formatMontantHT(c.valeurHtRestante)}
-                  </span>
-                </td>
-                <td>
-                  <ProgressBar
-                    value={c.pourcentageAvancement}
-                    color={c.pourcentageAvancement === 100 ? 'green' : c.pourcentageAvancement === 0 ? 'gray' : 'blue'}
-                    size="sm"
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-50 font-semibold">
-              <td className="px-4 py-2 text-sm text-gray-700 sm:hidden">Sous-total</td>
-              <td colSpan={2} className="px-4 py-2 text-sm text-gray-700 hidden sm:table-cell">Sous-total {label}</td>
-              <td className="px-4 py-2 text-right text-sm whitespace-nowrap">
-                {formatMontantHT(filtered.reduce((s, c) => s + c.montantHT, 0))}
-              </td>
-              <td className="px-4 py-2 text-right text-sm text-orange-600 whitespace-nowrap hidden sm:table-cell">
-                {formatMontantHT(filtered.reduce((s, c) => s + c.valeurHtRestante, 0))}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </ScrollTableLeft>
-    </div>
+    <>
+      <tr className="bg-rom-50 border-t border-b border-rom-100">
+        <td colSpan={5} className="px-4 py-2 font-bold text-rom-700 uppercase tracking-wide text-[11px]">
+          {label}
+        </td>
+      </tr>
+      {commandes.map((c, i) => (
+        <tr key={i}>
+          <td className="font-medium text-gray-900 text-xs">{c.societe}</td>
+          <td className="text-gray-500 hidden sm:table-cell">{c.lot || '—'}</td>
+          <td className="text-right font-medium whitespace-nowrap">{formatMontantHT(c.montantHT)}</td>
+          <td className="text-right hidden sm:table-cell">
+            <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-medium'}>
+              {formatMontantHT(c.valeurHtRestante)}
+            </span>
+          </td>
+          <td>
+            <ProgressBar
+              value={c.pourcentageAvancement}
+              color={c.pourcentageAvancement === 100 ? 'green' : c.pourcentageAvancement === 0 ? 'gray' : 'blue'}
+              size="sm"
+            />
+          </td>
+        </tr>
+      ))}
+      <tr className="bg-gray-50 font-semibold border-t border-gray-200">
+        <td className="px-4 py-2 text-sm text-gray-700 sm:hidden">Sous-total</td>
+        <td colSpan={2} className="px-4 py-2 text-sm text-gray-700 hidden sm:table-cell">Sous-total {label}</td>
+        <td className="px-4 py-2 text-right text-sm whitespace-nowrap">{formatMontantHT(totalHT)}</td>
+        <td className="px-4 py-2 text-right text-sm text-orange-600 whitespace-nowrap hidden sm:table-cell">{formatMontantHT(totalVal)}</td>
+        <td />
+      </tr>
+    </>
   );
 }
 
@@ -122,12 +100,29 @@ export function CommandesTableClient({ commandes }: { commandes: Commande[] }) {
           )}
         </div>
       </div>
-      <div className="p-6 space-y-6">
-        <CommandesSubSection commandes={filtered} type="honoraires" label="Honoraires" />
-        <CommandesSubSection commandes={filtered} type="travaux" label="Travaux" />
-        <CommandesSubSection commandes={filtered} type="divers" label="Divers" />
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-400 py-4 text-sm">Aucune commande correspondante</p>
+      <div className="overflow-x-auto">
+        {filtered.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 text-sm">Aucune commande correspondante</p>
+        ) : (
+          <table className="rom-table">
+            <thead>
+              <tr>
+                <th>Société</th>
+                <th className="hidden sm:table-cell">LOT / Mission</th>
+                <th className="text-right whitespace-nowrap">Montant HT</th>
+                <th className="text-right whitespace-nowrap hidden sm:table-cell">Valeur restante</th>
+                <th style={{ width: 140 }}>% Avanc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(['honoraires', 'travaux', 'divers'] as const).map((type) => {
+                const group = filtered.filter((c) => c.type === type);
+                if (group.length === 0) return null;
+                const label = type === 'honoraires' ? 'Honoraires' : type === 'travaux' ? 'Travaux' : 'Divers';
+                return <SectionRows key={type} commandes={group} label={label} />;
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

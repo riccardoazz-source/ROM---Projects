@@ -548,7 +548,11 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Budget keywords can appear anywhere in the section
   if (!BUDGET_KEYWORDS_RE.test(lines.join(' '))) return undefined;
 
-  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement|intitulés?\s*total\s*ht|dce\s+ind\.?\s*\d*\s*entreprise|programme\s+aps|estimation\s*$|conception\s+execution|entreprise\s+marche)/i;
+  const SKIP = /^(société|montant ht|% d'avancement|valeur ht|bordereau de transmission|tableau|liste des|date facture|bordereau de paiement|intitulés?\s*total\s*ht|dce\s+ind\.?\s*\d*\s*entreprise|programme\s+aps|conception\s+execution|entreprise\s+marche)/i;
+  // Commande-category labels that appear as section dividers in the budget raw text but
+  // are not column headers. Exclude them from preDataLines so they don't pollute the
+  // column-header detection heuristics.
+  const SECTION_LABEL_RE = /^(travaux|honoraires|divers|prestations|études|moe|maîtrise d'œuvre)\s*$/i;
   // Match amounts that are clearly budget values: either have decimal comma OR use space-grouped
   // thousands (≥ 1 000). Plain integers "1", "02", "15" are lot numbers, not budget amounts.
   const AMT_BUDGET = '(?:[1-9]\\d{0,2}(?: \\d{3})+(?:,\\d{1,2})?|(?:[1-9]\\d{0,2}|0),\\d{1,2})';
@@ -601,7 +605,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   for (let i = startIdx; i < lines.length; i++) {
     if (!lines[i] || SKIP.test(lines[i])) continue;
     if (getAmounts(lines[i]).length > 0) { dataStartIdx = i; break; }
-    if (!/^budget\s*$/i.test(lines[i]) && !/^budget\s*[-–]/i.test(lines[i])) {
+    if (!/^budget\s*$/i.test(lines[i]) && !/^budget\s*[-–]/i.test(lines[i]) && !SECTION_LABEL_RE.test(lines[i])) {
       preDataLines.push(lines[i]);
     }
   }
@@ -671,7 +675,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // TRAVAUX, HONORAIRES) — short abbreviations like APS, APE, DCE, MARCHE (≤ 6 chars) are kept.
   if (bestScore <= 0 && preDataLines.length >= 2) {
     const SPAN_HEADER_RE = /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ][A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ\s]{6,}$/;
-    const filtered = preDataLines.filter(l => !DATE_FRAG_RE.test(l) && !SPAN_HEADER_RE.test(l.trim()));
+    const filtered = preDataLines.filter(l => !DATE_FRAG_RE.test(l) && !SPAN_HEADER_RE.test(l.trim()) && !SECTION_LABEL_RE.test(l.trim()));
     const candidate = ROW_LABEL_RE.test(filtered[0] ?? '') ? filtered.slice(1) : filtered;
     if (candidate.length >= 2) {
       const score = candidate.length - Math.abs(candidate.length - maxAmts);
@@ -688,7 +692,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     return count > 1 ? `${h} ${count}` : h;
   });
   const colonnes: string[] = dedupedHeaders.slice(0, maxAmts);
-  const FALLBACK = ['Budget', 'Engagés', 'Facturés', 'Disponible', 'Reste', 'Écart'];
+  const FALLBACK = ['Estimation', 'Marché', 'Travaux soldés', 'Disponible', 'Reste', 'Écart'];
   while (colonnes.length < maxAmts) {
     const fb = FALLBACK[colonnes.length] ?? `Montant ${colonnes.length + 1}`;
     colonnes.push(fb);
