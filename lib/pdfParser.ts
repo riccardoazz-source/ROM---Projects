@@ -196,11 +196,13 @@ function parseAvancementEntries(sectionText: string): RawEntry[] {
 }
 
 /**
- * Parse "valeur HT restante" table: returns societe → valeurHtRestante.
+ * Parse "valeur HT restante" table: returns societe → ordered list of valeurHtRestante.
+ * A société can appear multiple times (once per commande type). Using an ordered list
+ * lets mergeValeur assign the correct value to each occurrence via a counter.
  * Each entry: (société)(montantHT)(valeur).
  */
-function parseValeurEntries(sectionText: string): Map<string, number> {
-  const result = new Map<string, number>();
+function parseValeurEntries(sectionText: string): Map<string, number[]> {
+  const result = new Map<string, number[]>();
   const lines = sectionText.split('\n').map(l => l.trim());
   for (const line of lines) {
     if (!line || SKIP_LINE_RE.test(line)) continue;
@@ -210,7 +212,8 @@ function parseValeurEntries(sectionText: string): Map<string, number> {
     while ((m = re.exec(line)) !== null) {
       const societe = line.slice(lastEnd, m.index).trim();
       if (societe && !SKIP_LINE_RE.test(societe)) {
-        result.set(societe, parseMontant(m[2]));
+        if (!result.has(societe)) result.set(societe, []);
+        result.get(societe)!.push(parseMontant(m[2]));
       }
       lastEnd = m.index + m[0].length;
     }
@@ -345,11 +348,14 @@ function classifyByTotals(
   return result;
 }
 
-function mergeValeur(commandes: RawCommande[], valeurMap: Map<string, number>): void {
+function mergeValeur(commandes: RawCommande[], valeurMap: Map<string, number[]>): void {
+  const counters = new Map<string, number>();
   for (const c of commandes) {
-    if (valeurMap.has(c.societe)) {
-      c.valeurHtRestante = valeurMap.get(c.societe)!;
-    }
+    const vals = valeurMap.get(c.societe);
+    if (!vals || vals.length === 0) continue;
+    const idx = counters.get(c.societe) ?? 0;
+    c.valeurHtRestante = vals[Math.min(idx, vals.length - 1)];
+    counters.set(c.societe, idx + 1);
   }
 }
 
@@ -796,7 +802,7 @@ export function parseRapportFromPdf(
   }
 
   const rawEntries = parseAvancementEntries(avancementSection);
-  const valeurMap = hasValeurRestante ? parseValeurEntries(valeurSection) : new Map<string, number>();
+  const valeurMap = hasValeurRestante ? parseValeurEntries(valeurSection) : new Map<string, number[]>();
   const knownSocietes = rawEntries.map(e => e.societe).filter((s, i, a) => a.indexOf(s) === i);
 
   const lotMap = hasLotsSection
