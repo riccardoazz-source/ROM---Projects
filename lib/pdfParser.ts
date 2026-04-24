@@ -578,7 +578,10 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     return r.replace(/[.:,;]+$/, '').trim();
   }
 
-  // Extract title ("Budget - 23 février 26")
+  // Extract title ("Budget - 23 février 26").
+  // If no "Budget" title is present (e.g. 42RBOUL), leave startIdx=0 so that
+  // pre-data lines (column headers like CONCEPTION/Estimation/Programme/APS…)
+  // are not consumed as pseudo-titles.
   let titre = '';
   let startIdx = 0;
   for (let i = 0; i < Math.min(lines.length, 5); i++) {
@@ -589,7 +592,6 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
       break;
     }
     if (getAmounts(l).length > 0) { startIdx = i; break; }
-    startIdx = i + 1;
   }
 
   // ── Pass 1: determine dataStartIdx and collect pre-data header lines ─────────
@@ -605,8 +607,11 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
 
   // ── Pass 2: maxAmts ───────────────────────────────────────────────────────────
+  // Exclude subtotal/total rows: pdf-parse can concatenate a row number (e.g. "1")
+  // directly onto a monetary value ("0,00") producing "10,00" which inflates the count.
   let maxAmts = 0;
   for (let i = dataStartIdx; i < lines.length; i++) {
+    if (TOTAL_RE.test(lines[i])) continue;
     const n = getAmounts(lines[i]).length;
     if (n > maxAmts) maxAmts = n;
   }
@@ -710,7 +715,8 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
       amts.length === 0 ? 'section' :
       TOTAL_RE.test(libelle) ? 'total' : 'item';
 
-    const valeurs = [...amts, ...new Array(maxAmts - amts.length).fill(0)];
+    const trimmed = amts.slice(0, maxAmts);
+    const valeurs = [...trimmed, ...new Array(maxAmts - trimmed.length).fill(0)];
     lignes.push({ libelle: libelle || '—', type, valeurs });
   }
 
@@ -744,16 +750,18 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     }
     return null;
   });
+  // IMPORTANT: pdf-parse extracts the data rows in VISUAL left-to-right order,
+  // but the column header row can be extracted in a different (stream) order.
+  // Therefore, when all columns are recognized, reorder ONLY the column labels
+  // into standard visual order; the data values are already correctly positioned.
   if (colRanks.every(r => r !== null) && colonnes.length >= 2) {
     const order = Array.from({ length: colonnes.length }, (_, i) => i)
       .sort((a, b) => (colRanks[a] as number) - (colRanks[b] as number));
     if (!order.every((v, i) => v === i)) {
       const origCols = [...colonnes];
       for (let i = 0; i < colonnes.length; i++) colonnes[i] = origCols[order[i]];
-      for (const ligne of lignes) {
-        const orig = [...ligne.valeurs];
-        for (let i = 0; i < ligne.valeurs.length; i++) ligne.valeurs[i] = orig[order[i]];
-      }
+      // Note: intentionally do NOT reorder ligne.valeurs — pdf-parse extracts data
+      // rows in visual order even when headers are in a different stream order.
     }
   }
 
@@ -892,8 +900,10 @@ export function parseRapportFromPdf(
     // "Bordereau de transmission" is just a page-break header; after skipping it we
     // check whether the content that follows is still budget or a new section.
     const PAGE_BREAK_RE = /\nbordereau de transmission\b/;
-    // After a page break, these openings signal a new real section (not budget continuation)
+    // After a page break, stop if content looks like a new section OR facture data.
+    // Factures start with a DD/MM/YYYY date (optionally preceded by a short project name line).
     const NEW_SECTION_START_RE = /^(?:liste des factures|tableau récapitulatif|bordereau de paiement|date facture)\b/i;
+    const FACTURE_START_RE = /^\d{2}\/\d{2}\/\d{4}/m;
 
     const parts: string[] = [];
     let cursor = lineStart;
@@ -918,13 +928,52 @@ export function parseRapportFromPdf(
       const breakLineEnd = searchText.indexOf('\n', breakLineStart + 'bordereau de transmission'.length);
       cursor = breakLineEnd >= 0 ? breakLineEnd + 1 : searchText.length;
 
-      // If what follows the break is a new major section, stop collecting
+      // Peek at the next few non-empty lines to decide if this is budget continuation
+      // or the start of the factures section (which begins with raw date lines).
       const nextContent = searchText.slice(cursor).trimStart();
       if (NEW_SECTION_START_RE.test(nextContent)) break;
+      // Check the first few lines for a facture-style date start → stop
+      const peek = nextContent.split('\n').slice(0, 3).map(l => l.trim()).filter(Boolean);
+      if (peek.some(l => FACTURE_START_RE.test(l))) break;
       // Otherwise continue — this is a budget continuation page
     }
 
     return parts.join('\n');
+  }
+
+  // Fallback for PDFs where the budget section has no explicit "Budget" title
+  // (e.g. 42RBOUL): the budget sits between the "% d'avancement" section and
+  // the "Liste des factures" / first facture date. Collect that content,
+  // stripping the page-break "Bordereau de transmission" headers.
+  function findBudgetRawByPosition(searchText: string): string {
+    const lo = searchText.toLowerCase();
+    const avMarker = lo.indexOf("(% d'avancement)");
+    if (avMarker === -1) return '';
+    // Skip past the avancement section: find its end marker (next major section / page)
+    const pageBreakRe = /\nbordereau de transmission\b/;
+    const lfMarker = lo.indexOf('liste des factures', avMarker);
+    const factureDateRe = /\n\d{2}\/\d{2}\/\d{4}/;
+
+    // Find end of avancement section: first page break after the marker
+    const avRest = lo.slice(avMarker);
+    const firstBreak = avRest.search(pageBreakRe);
+    if (firstBreak === -1) return '';
+    const budgetStart = avMarker + firstBreak + 1; // skip the \n
+
+    // Determine budget end: first "Liste des factures" OR first facture-style date line
+    const bRest = lo.slice(budgetStart);
+    const lfIdx = lfMarker !== -1 ? lfMarker - budgetStart : -1;
+    const dateIdx = bRest.search(factureDateRe);
+    const candidates = [lfIdx, dateIdx].filter(i => i >= 0);
+    if (candidates.length === 0) return '';
+    const budgetEnd = budgetStart + Math.min(...candidates);
+
+    // Extract and strip "Bordereau de transmission" + project-name page-break noise
+    const raw = searchText.slice(budgetStart, budgetEnd);
+    return raw
+      .split('\n')
+      .filter(l => !/^\s*bordereau de transmission\s*$/i.test(l))
+      .join('\n');
   }
 
   const bpIdx = text.toLowerCase().indexOf('bordereau de paiement');
@@ -932,6 +981,8 @@ export function parseRapportFromPdf(
   let budgetRaw = findBudgetRaw(afterBordereau);
   // If not found after bordereau, search entire text as fallback
   if (!budgetRaw) budgetRaw = findBudgetRaw(text);
+  // Final fallback: PDFs without an explicit "Budget" title
+  if (!budgetRaw) budgetRaw = findBudgetRawByPosition(text);
   const budget = budgetRaw ? parseBudgetTable(budgetRaw) : undefined;
 
   return {
