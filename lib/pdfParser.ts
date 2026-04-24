@@ -722,6 +722,32 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
 
   if (lignes.filter(l => l.type !== 'section').length === 0) return undefined;
 
+  // Drop "page-header" section clusters: on multi-page budgets, pdf-parse emits
+  // the repeated column-header band (project name + CONCEPTION/EXECUTION/
+  // PROGRAMME/APS/APD/…) as a run of section rows between real data. Detect
+  // runs of consecutive section rows; if any row in the run is a single-word
+  // column-header keyword, drop the entire run (including a project-name
+  // header like "42RBOUL" that rides along with it).
+  const COL_HEADER_ONLY = /^(programme|aps|ape|apd|dce(?:\s+ind\.?\s*\d*)?|marche|ts|entreprise|estimation|conception|execution|intitulés?|total(?:\s+ht)?)$/i;
+  // Project-code-style header (e.g. "42RBOUL", "LOT3B") — all-caps+digits, short.
+  // These appear as page-top project-name banners on multi-page budgets.
+  const PROJECT_CODE_RE = /^[A-Z][A-Z0-9]*\d[A-Z0-9]*$|^\d[A-Z0-9]*[A-Z][A-Z0-9]*$/;
+  const cleaned: BudgetLigne[] = [];
+  for (let i = 0; i < lignes.length; ) {
+    if (lignes[i].type !== 'section') { cleaned.push(lignes[i]); i++; continue; }
+    let j = i;
+    while (j < lignes.length && lignes[j].type === 'section') j++;
+    const run = lignes.slice(i, j);
+    const isNoise = run.some(l => {
+      const lib = l.libelle.trim();
+      return COL_HEADER_ONLY.test(lib) || PROJECT_CODE_RE.test(lib);
+    });
+    if (!isNoise) cleaned.push(...run);
+    i = j;
+  }
+  lignes.length = 0;
+  lignes.push(...cleaned);
+
   // Semantic reordering: if ALL detected column names are recognized budget vocabulary,
   // sort columns (and their values) into the standard visual left-to-right order.
   // This fixes PDFs (like MIRROR) where pdf-parse reads the header row in a non-visual order.
