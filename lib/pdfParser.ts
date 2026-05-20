@@ -743,6 +743,8 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // Project-code-style header (e.g. "42RBOUL", "LOT3B") — all-caps+digits, short.
   // These appear as page-top project-name banners on multi-page budgets.
   const PROJECT_CODE_RE = /^[A-Z][A-Z0-9]*\d[A-Z0-9]*$|^\d[A-Z0-9]*[A-Z][A-Z0-9]*$/;
+  const stripAccents = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const cleaned: BudgetLigne[] = [];
   for (let i = 0; i < lignes.length; ) {
     if (lignes[i].type !== 'section') { cleaned.push(lignes[i]); i++; continue; }
@@ -751,13 +753,45 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     const run = lignes.slice(i, j);
     const isNoise = run.some(l => {
       const lib = l.libelle.trim();
-      return COL_HEADER_ONLY.test(lib) || PROJECT_CODE_RE.test(lib);
+      if (COL_HEADER_ONLY.test(lib) || PROJECT_CODE_RE.test(lib)) return true;
+      // Drop section rows whose libellé contains every detected column name —
+      // these are column-header bands repeated at the top of each PDF page.
+      if (colonnes.length >= 3) {
+        const libN = stripAccents(lib);
+        if (colonnes.every(c => libN.includes(stripAccents(c)))) return true;
+      }
+      return false;
     });
     if (!isNoise) cleaned.push(...run);
     i = j;
   }
   lignes.length = 0;
   lignes.push(...cleaned);
+
+  // Merge: a 'section' row (text label, no amounts) immediately followed by an 'item'
+  // row with libellé '—' (amounts only, no label). This happens when pdf-parse extracts
+  // a row's label and its amounts on separate lines. Merge them into one correctly-typed row.
+  // Guard: never merge generic section-header labels (Travaux, Honoraires, Divers…).
+  const mergedLignes: BudgetLigne[] = [];
+  for (let i = 0; i < lignes.length; i++) {
+    const curr = lignes[i];
+    const next = lignes[i + 1];
+    if (
+      curr.type === 'section' &&
+      !SECTION_LABEL_RE.test(curr.libelle.trim()) &&
+      next !== undefined &&
+      next.libelle === '—' &&
+      next.valeurs.some(v => v !== 0)
+    ) {
+      const mergedType: BudgetLigne['type'] = TOTAL_RE.test(curr.libelle) ? 'total' : 'item';
+      mergedLignes.push({ libelle: curr.libelle, type: mergedType, valeurs: next.valeurs });
+      i++; // skip the orphan-amounts row
+    } else {
+      mergedLignes.push(curr);
+    }
+  }
+  lignes.length = 0;
+  lignes.push(...mergedLignes);
 
   // Semantic reordering: if ALL detected column names are recognized budget vocabulary,
   // sort columns (and their values) into the standard visual left-to-right order.
