@@ -154,10 +154,8 @@ const FACTURE_GETTERS: Record<string, Getter<Facture>> = {
   factureOuSituation: (f) => f.factureOuSituation,
   societe: (f) => f.societe,
   dateValidationAMO: (f) => dateKey(f.dateValidationAMO),
-  montantHT: (f) => f.montantHT,
   montantTTC: (f) => f.montantTTC,
   retenueGarantie: (f) => f.retenueGarantie,
-  pourcentageFactureSurCommande: (f) => f.pourcentageFactureSurCommande,
   pourcentageAvancementTotal: (f) => f.pourcentageAvancementTotal,
 };
 
@@ -176,6 +174,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
 
   const table = useDataTable(searched, FACTURE_GETTERS);
   const rows = table.view;
+  const totalTTC = rows.reduce((s, f) => s + f.montantTTC, 0);
 
   return (
     <div className="rom-card overflow-hidden mb-8">
@@ -207,47 +206,35 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
           )}
         </div>
       </div>
-      <ScrollTableLeft>
+      <div className="overflow-x-auto">
         <table className="rom-table compact">
           <thead>
             <tr>
-              <Th label="Date" colKey="dateFacture" table={table} className="hidden sm:table-cell" filterable={false} />
+              <Th label="Date" colKey="dateFacture" table={table} filterable={false} />
               <Th label="N° Facture" colKey="factureOuSituation" table={table} filterable={false} />
-              <Th label="Société" colKey="societe" table={table} className="hidden sm:table-cell" />
-              <Th label="Validation AMO" colKey="dateValidationAMO" table={table} className="hidden md:table-cell" filterable={false} />
-              <Th label="Montant HT" colKey="montantHT" table={table} className="hidden sm:table-cell text-right" align="right" filterable={false} />
+              <Th label="Société" colKey="societe" table={table} />
+              <Th label="Valid. AMO" colKey="dateValidationAMO" table={table} filterable={false} />
               <Th label="Montant TTC" colKey="montantTTC" table={table} className="text-right" align="right" filterable={false} />
-              <Th label="Retenue" colKey="retenueGarantie" table={table} className="hidden md:table-cell text-right" align="right" />
-              <Th label="% Cmd" colKey="pourcentageFactureSurCommande" table={table} className="hidden md:table-cell text-right" align="right" />
               <Th label="% Avanc." colKey="pourcentageAvancementTotal" table={table} className="text-right" align="right" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center text-gray-400 py-8 text-sm">
+                <td colSpan={6} className="text-center text-gray-400 py-8 text-sm">
                   Aucune facture correspondante
                 </td>
               </tr>
             ) : (
               rows.map((f, i) => (
                 <tr key={i}>
-                  <td className="hidden sm:table-cell text-gray-500 whitespace-nowrap">{f.dateFacture}</td>
+                  <td className="text-gray-500 whitespace-nowrap">{f.dateFacture}</td>
                   <td className="font-medium whitespace-nowrap">{f.factureOuSituation}</td>
-                  <td className="hidden sm:table-cell whitespace-nowrap">{f.societe}</td>
-                  <td className="hidden md:table-cell text-gray-500 whitespace-nowrap">{f.dateValidationAMO}</td>
-                  <td className="hidden sm:table-cell text-right font-medium whitespace-nowrap">{formatMontantHT(f.montantHT)}</td>
+                  <td className="whitespace-nowrap">{f.societe}</td>
+                  <td className="text-gray-500 whitespace-nowrap">{f.dateValidationAMO}</td>
                   <td className="text-right font-bold text-rom-600 whitespace-nowrap">{formatMontantHT(f.montantTTC)}</td>
-                  <td className="hidden md:table-cell text-right whitespace-nowrap">
-                    {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
-                  </td>
-                  <td className="hidden md:table-cell text-right font-medium whitespace-nowrap">{f.pourcentageFactureSurCommande}%</td>
                   <td className="text-right whitespace-nowrap">
-                    <span
-                      className={`font-bold ${
-                        f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'
-                      }`}
-                    >
+                    <span className={`font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
                       {f.pourcentageAvancementTotal}%
                     </span>
                   </td>
@@ -255,8 +242,17 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
               ))
             )}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr>
+                <td colSpan={4}>TOTAL ({rows.length} factures)</td>
+                <td className="text-right">{formatMontantHT(totalTTC)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </table>
-      </ScrollTableLeft>
+      </div>
     </div>
   );
 }
@@ -304,7 +300,6 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
   const table = useDataTable(monthFactures, FACTURE_GETTERS);
   const rows = table.view;
 
-  const totalHT = rows.reduce((s, f) => s + f.montantHT, 0);
   const totalTTC = rows.reduce((s, f) => s + f.montantTTC, 0);
 
   if (factures.length === 0) return null;
@@ -340,60 +335,45 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
       {rows.length === 0 ? (
         <div className="p-8 text-center text-gray-400 text-sm">Aucune facture pour cette période</div>
       ) : (
-        <ScrollTableLeft>
+        <div className="overflow-x-auto">
           <table className="rom-table compact">
             <thead>
               <tr>
-                <Th label="Date" colKey="dateFacture" table={table} className="hidden sm:table-cell" filterable={false} />
                 <Th label="N° Facture" colKey="factureOuSituation" table={table} filterable={false} />
-                <Th label="Société" colKey="societe" table={table} className="hidden sm:table-cell" />
-                <Th label="Validation AMO" colKey="dateValidationAMO" table={table} className="hidden sm:table-cell" filterable={false} />
-                <Th label="Montant HT" colKey="montantHT" table={table} className="hidden sm:table-cell text-right" align="right" filterable={false} />
+                <Th label="Société" colKey="societe" table={table} />
+                <Th label="Valid. AMO" colKey="dateValidationAMO" table={table} filterable={false} />
                 <Th label="Montant TTC" colKey="montantTTC" table={table} className="text-right" align="right" filterable={false} />
-                <Th label="Retenue" colKey="retenueGarantie" table={table} className="hidden sm:table-cell text-right" align="right" />
+                <Th label="Retenue" colKey="retenueGarantie" table={table} className="text-right" align="right" />
                 <Th label="% Avanc." colKey="pourcentageAvancementTotal" table={table} className="text-right" align="right" />
               </tr>
             </thead>
             <tbody>
-              {(() => {
-                const primaryDate = rows.find((f) => f.dateValidationAMO)?.dateValidationAMO ?? '';
-                return rows.map((f, i) => {
-                  const isSecondary = f.dateValidationAMO && f.dateValidationAMO !== primaryDate;
-                  return (
-                    <tr key={i} className={isSecondary ? 'bg-slate-50 text-slate-400' : undefined}>
-                      <td className="hidden sm:table-cell text-gray-500 whitespace-nowrap">{f.dateFacture}</td>
-                      <td className="font-medium whitespace-nowrap">{f.factureOuSituation}</td>
-                      <td className="hidden sm:table-cell whitespace-nowrap">{f.societe}</td>
-                      <td className="hidden sm:table-cell text-gray-500 whitespace-nowrap">{f.dateValidationAMO}</td>
-                      <td className="hidden sm:table-cell text-right whitespace-nowrap">{fmt(f.montantHT)}</td>
-                      <td className="text-right font-bold text-rom-600 whitespace-nowrap">{fmt(f.montantTTC)}</td>
-                      <td className="hidden sm:table-cell text-right text-gray-500 whitespace-nowrap">
-                        {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
-                      </td>
-                      <td className="text-right whitespace-nowrap">
-                        <span className={`font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
-                          {f.pourcentageAvancementTotal}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                });
-              })()}
+              {rows.map((f, i) => (
+                <tr key={i}>
+                  <td className="font-medium whitespace-nowrap">{f.factureOuSituation}</td>
+                  <td className="whitespace-nowrap">{f.societe}</td>
+                  <td className="text-gray-500 whitespace-nowrap">{f.dateValidationAMO}</td>
+                  <td className="text-right font-bold text-rom-600 whitespace-nowrap">{fmt(f.montantTTC)}</td>
+                  <td className="text-right text-gray-500 whitespace-nowrap">
+                    {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    <span className={`font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                      {f.pourcentageAvancementTotal}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
-              <tr className="bg-rom-600 text-white font-bold">
-                <td className="hidden sm:table-cell" />
-                <td className="px-4 py-3 text-sm whitespace-nowrap">TOTAL ({rows.length} fact.)</td>
-                <td className="hidden sm:table-cell" />
-                <td className="hidden sm:table-cell" />
-                <td className="hidden sm:table-cell px-4 py-3 text-right text-sm whitespace-nowrap">{fmt(totalHT)}</td>
-                <td className="px-4 py-3 text-right text-sm whitespace-nowrap">{fmt(totalTTC)}</td>
-                <td className="hidden sm:table-cell" />
-                <td />
+              <tr>
+                <td colSpan={3}>TOTAL ({rows.length} fact.)</td>
+                <td className="text-right">{fmt(totalTTC)}</td>
+                <td colSpan={2} />
               </tr>
             </tfoot>
           </table>
-        </ScrollTableLeft>
+        </div>
       )}
     </div>
   );
