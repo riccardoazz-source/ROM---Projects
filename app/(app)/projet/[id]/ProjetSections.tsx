@@ -79,16 +79,16 @@ function SortTh({
     <th
       onClick={() => onSort(sortKey)}
       style={style}
-      className={`cursor-pointer select-none hover:bg-gray-100 transition-colors whitespace-nowrap ${className}`}
+      className={`cursor-pointer select-none hover:bg-white/10 transition-colors whitespace-nowrap ${className}`}
     >
       <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
         {label}
         {active ? (
           sort!.dir === 'asc'
-            ? <ChevronUp className="w-3.5 h-3.5 text-rom-600" />
-            : <ChevronDown className="w-3.5 h-3.5 text-rom-600" />
+            ? <ChevronUp className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            : <ChevronDown className="w-3.5 h-3.5 text-amber-300 shrink-0" />
         ) : (
-          <ChevronsUpDown className="w-3.5 h-3.5 text-gray-300" />
+          <ChevronsUpDown className="w-3.5 h-3.5 text-white/40 shrink-0" />
         )}
       </span>
     </th>
