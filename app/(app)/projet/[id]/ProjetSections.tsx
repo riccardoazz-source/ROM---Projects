@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, XCircle, CheckCircle } from 'lucide-react';
+import { Search, XCircle, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
 import ScrollTableLeft from '@/components/ScrollTableLeft';
 import { Commande, Facture } from '@/types';
@@ -20,7 +20,90 @@ const FRENCH_MONTHS = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
+// ─── Sorting helpers ─────────────────────────────────────────────────────────
+
+type SortDir = 'asc' | 'desc';
+interface SortState { key: string; dir: SortDir; }
+
+// Three-state click cycle: ascending → descending → unsorted.
+function useSort(initial: SortState | null = null) {
+  const [sort, setSort] = useState<SortState | null>(initial);
+  const toggle = (key: string) =>
+    setSort((s) =>
+      s && s.key === key
+        ? (s.dir === 'asc' ? { key, dir: 'desc' as SortDir } : null)
+        : { key, dir: 'asc' as SortDir },
+    );
+  return { sort, toggle };
+}
+
+function sortRows<T>(
+  rows: T[],
+  sort: SortState | null,
+  getters: Record<string, (r: T) => string | number>,
+): T[] {
+  if (!sort) return rows;
+  const get = getters[sort.key];
+  if (!get) return rows;
+  const arr = [...rows];
+  arr.sort((a, b) => {
+    const va = get(a);
+    const vb = get(b);
+    let cmp: number;
+    if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb;
+    else cmp = String(va).localeCompare(String(vb), 'fr', { numeric: true, sensitivity: 'base' });
+    return sort.dir === 'asc' ? cmp : -cmp;
+  });
+  return arr;
+}
+
+// "DD/MM/YYYY" → "YYYYMMDD" so dates sort chronologically as plain strings.
+function dateSortKey(d: string): string {
+  if (!d || d.length < 10) return '0';
+  return d.slice(6, 10) + d.slice(3, 5) + d.slice(0, 2);
+}
+
+function SortTh({
+  label, sortKey, sort, onSort, className = '', align = 'left', style,
+}: {
+  label: string;
+  sortKey: string;
+  sort: SortState | null;
+  onSort: (k: string) => void;
+  className?: string;
+  align?: 'left' | 'right';
+  style?: React.CSSProperties;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <th
+      onClick={() => onSort(sortKey)}
+      style={style}
+      className={`cursor-pointer select-none hover:bg-gray-100 transition-colors whitespace-nowrap ${className}`}
+    >
+      <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+        {label}
+        {active ? (
+          sort!.dir === 'asc'
+            ? <ChevronUp className="w-3.5 h-3.5 text-rom-600" />
+            : <ChevronDown className="w-3.5 h-3.5 text-rom-600" />
+        ) : (
+          <ChevronsUpDown className="w-3.5 h-3.5 text-gray-300" />
+        )}
+      </span>
+    </th>
+  );
+}
+
 // ─── Internal helpers ────────────────────────────────────────────────────────
+
+const COMMANDE_GETTERS: Record<string, (c: Commande) => string | number> = {
+  societe: (c) => c.societe.toLowerCase(),
+  lot: (c) => (c.lot || '').toLowerCase(),
+  montantHT: (c) => c.montantHT,
+  valeurHtRestante: (c) => c.valeurHtRestante,
+  pourcentageAvancement: (c) => c.pourcentageAvancement,
+};
 
 function SectionRows({ commandes, label }: { commandes: Commande[]; label: string }) {
   const totalHT = commandes.reduce((s, c) => s + c.montantHT, 0);
@@ -37,7 +120,7 @@ function SectionRows({ commandes, label }: { commandes: Commande[]; label: strin
           <td className="font-medium text-gray-900 text-xs">{c.societe}</td>
           <td className="text-gray-500 hidden sm:table-cell">{c.lot || '—'}</td>
           <td className="text-right font-medium whitespace-nowrap">{formatMontantHT(c.montantHT)}</td>
-          <td className="text-right hidden sm:table-cell">
+          <td className="text-right hidden sm:table-cell whitespace-nowrap">
             <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-medium'}>
               {formatMontantHT(c.valeurHtRestante)}
             </span>
@@ -66,6 +149,7 @@ function SectionRows({ commandes, label }: { commandes: Commande[]; label: strin
 
 export function CommandesTableClient({ commandes }: { commandes: Commande[] }) {
   const [search, setSearch] = useState('');
+  const { sort, toggle } = useSort();
 
   const filtered = useMemo(() => {
     if (!search) return commandes;
@@ -74,6 +158,20 @@ export function CommandesTableClient({ commandes }: { commandes: Commande[] }) {
       (c) => c.societe.toLowerCase().includes(q) || c.lot.toLowerCase().includes(q),
     );
   }, [commandes, search]);
+
+  // Sorting is applied within each Honoraires / Travaux / Divers group so the
+  // group structure and its subtotals stay correct.
+  const groups = useMemo(
+    () =>
+      (['honoraires', 'travaux', 'divers'] as const)
+        .map((type) => ({
+          type,
+          label: type === 'honoraires' ? 'Honoraires' : type === 'travaux' ? 'Travaux' : 'Divers',
+          rows: sortRows(filtered.filter((c) => c.type === type), sort, COMMANDE_GETTERS),
+        }))
+        .filter((g) => g.rows.length > 0),
+    [filtered, sort],
+  );
 
   return (
     <div className="rom-card overflow-hidden mb-8">
@@ -100,49 +198,61 @@ export function CommandesTableClient({ commandes }: { commandes: Commande[] }) {
           )}
         </div>
       </div>
-      <div className="overflow-x-auto">
-        {filtered.length === 0 ? (
+      <ScrollTableLeft>
+        {groups.length === 0 ? (
           <p className="text-center text-gray-400 py-8 text-sm">Aucune commande correspondante</p>
         ) : (
           <table className="rom-table">
             <thead>
               <tr>
-                <th>Société</th>
-                <th className="hidden sm:table-cell">LOT / Mission</th>
-                <th className="text-right whitespace-nowrap">Montant HT</th>
-                <th className="text-right whitespace-nowrap hidden sm:table-cell">Valeur restante</th>
-                <th style={{ width: 140 }}>% Avanc.</th>
+                <SortTh label="Société" sortKey="societe" sort={sort} onSort={toggle} />
+                <SortTh label="LOT / Mission" sortKey="lot" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+                <SortTh label="Montant HT" sortKey="montantHT" sort={sort} onSort={toggle} className="text-right" align="right" />
+                <SortTh label="Valeur restante" sortKey="valeurHtRestante" sort={sort} onSort={toggle} className="text-right hidden sm:table-cell" align="right" />
+                <SortTh label="% Avanc." sortKey="pourcentageAvancement" sort={sort} onSort={toggle} style={{ width: 140 }} />
               </tr>
             </thead>
             <tbody>
-              {(['honoraires', 'travaux', 'divers'] as const).map((type) => {
-                const group = filtered.filter((c) => c.type === type);
-                if (group.length === 0) return null;
-                const label = type === 'honoraires' ? 'Honoraires' : type === 'travaux' ? 'Travaux' : 'Divers';
-                return <SectionRows key={type} commandes={group} label={label} />;
-              })}
+              {groups.map((g) => (
+                <SectionRows key={g.type} commandes={g.rows} label={g.label} />
+              ))}
             </tbody>
           </table>
         )}
-      </div>
+      </ScrollTableLeft>
     </div>
   );
 }
 
 // ─── FacturesListClient ──────────────────────────────────────────────────────
 
+const FACTURE_GETTERS: Record<string, (f: Facture) => string | number> = {
+  dateFacture: (f) => dateSortKey(f.dateFacture),
+  factureOuSituation: (f) => f.factureOuSituation.toLowerCase(),
+  societe: (f) => f.societe.toLowerCase(),
+  dateValidationAMO: (f) => dateSortKey(f.dateValidationAMO),
+  montantHT: (f) => f.montantHT,
+  montantTTC: (f) => f.montantTTC,
+  retenueGarantie: (f) => f.retenueGarantie,
+  pourcentageFactureSurCommande: (f) => f.pourcentageFactureSurCommande,
+  pourcentageAvancementTotal: (f) => f.pourcentageAvancementTotal,
+};
+
 export function FacturesListClient({ factures }: { factures: Facture[] }) {
   const [search, setSearch] = useState('');
+  const { sort, toggle } = useSort();
 
   const filtered = useMemo(() => {
-    if (!search) return factures;
     const q = search.toLowerCase();
-    return factures.filter(
-      (f) =>
-        f.factureOuSituation.toLowerCase().includes(q) ||
-        f.societe.toLowerCase().includes(q),
-    );
-  }, [factures, search]);
+    const base = !search
+      ? factures
+      : factures.filter(
+          (f) =>
+            f.factureOuSituation.toLowerCase().includes(q) ||
+            f.societe.toLowerCase().includes(q),
+        );
+    return sortRows(base, sort, FACTURE_GETTERS);
+  }, [factures, search, sort]);
 
   return (
     <div className="rom-card overflow-hidden mb-8">
@@ -178,16 +288,16 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
         <table className="rom-table">
           <thead>
             <tr>
-              <th className="hidden sm:table-cell whitespace-nowrap">Date facture</th>
-              <th>N° Facture / Situation</th>
-              <th className="hidden sm:table-cell">Société</th>
-              <th className="hidden md:table-cell whitespace-nowrap">Date validation AMO</th>
-              <th className="hidden sm:table-cell text-right">Montant HT</th>
-              <th className="text-right whitespace-nowrap">Montant TTC</th>
-              <th className="hidden md:table-cell text-right">Retenue</th>
-              <th className="hidden md:table-cell text-right">% Commande</th>
-              <th className="text-right whitespace-nowrap">% Avanc.</th>
-              <th className="hidden sm:table-cell">Statut</th>
+              <SortTh label="Date facture" sortKey="dateFacture" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+              <SortTh label="N° Facture / Situation" sortKey="factureOuSituation" sort={sort} onSort={toggle} />
+              <SortTh label="Société" sortKey="societe" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+              <SortTh label="Date validation AMO" sortKey="dateValidationAMO" sort={sort} onSort={toggle} className="hidden md:table-cell" />
+              <SortTh label="Montant HT" sortKey="montantHT" sort={sort} onSort={toggle} className="hidden sm:table-cell text-right" align="right" />
+              <SortTh label="Montant TTC" sortKey="montantTTC" sort={sort} onSort={toggle} className="text-right" align="right" />
+              <SortTh label="Retenue" sortKey="retenueGarantie" sort={sort} onSort={toggle} className="hidden md:table-cell text-right" align="right" />
+              <SortTh label="% Commande" sortKey="pourcentageFactureSurCommande" sort={sort} onSort={toggle} className="hidden md:table-cell text-right" align="right" />
+              <SortTh label="% Avanc." sortKey="pourcentageAvancementTotal" sort={sort} onSort={toggle} className="text-right" align="right" />
+              <th className="hidden sm:table-cell whitespace-nowrap">Statut</th>
             </tr>
           </thead>
           <tbody>
@@ -201,16 +311,16 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
               filtered.map((f, i) => (
                 <tr key={i}>
                   <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
-                  <td className="font-medium text-xs">{f.factureOuSituation}</td>
-                  <td className="hidden sm:table-cell text-xs">{f.societe}</td>
+                  <td className="font-medium text-xs whitespace-nowrap">{f.factureOuSituation}</td>
+                  <td className="hidden sm:table-cell text-xs whitespace-nowrap">{f.societe}</td>
                   <td className="hidden md:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
-                  <td className="hidden sm:table-cell text-right font-medium">{formatMontantHT(f.montantHT)}</td>
+                  <td className="hidden sm:table-cell text-right font-medium whitespace-nowrap">{formatMontantHT(f.montantHT)}</td>
                   <td className="text-right font-bold text-rom-600 whitespace-nowrap">{formatMontantHT(f.montantTTC)}</td>
-                  <td className="hidden md:table-cell text-right text-xs">
+                  <td className="hidden md:table-cell text-right text-xs whitespace-nowrap">
                     {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
                   </td>
-                  <td className="hidden md:table-cell text-right text-xs font-medium">{f.pourcentageFactureSurCommande}%</td>
-                  <td className="text-right">
+                  <td className="hidden md:table-cell text-right text-xs font-medium whitespace-nowrap">{f.pourcentageFactureSurCommande}%</td>
+                  <td className="text-right whitespace-nowrap">
                     <span
                       className={`text-xs font-bold ${
                         f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'
@@ -220,7 +330,7 @@ export function FacturesListClient({ factures }: { factures: Facture[] }) {
                     </span>
                   </td>
                   <td className="hidden sm:table-cell">
-                    <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                    <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                       <CheckCircle className="w-3 h-3" /> Validée
                     </span>
                   </td>
@@ -251,6 +361,8 @@ function monthKeyToLabel(key: string): string {
 }
 
 export function BordereauClient({ factures }: { factures: Facture[] }) {
+  const { sort, toggle } = useSort();
+
   // Group factures by MM/YYYY of dateValidationAMO (format: DD/MM/YYYY)
   const monthKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -269,9 +381,11 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => monthKeys[0] ?? '');
 
   const filtered = useMemo(() => {
-    if (!selectedMonth) return factures;
-    return factures.filter((f) => getMonthKey(f.dateValidationAMO) === selectedMonth);
-  }, [factures, selectedMonth]);
+    const base = !selectedMonth
+      ? factures
+      : factures.filter((f) => getMonthKey(f.dateValidationAMO) === selectedMonth);
+    return sortRows(base, sort, FACTURE_GETTERS);
+  }, [factures, selectedMonth, sort]);
 
   const totalHT  = filtered.reduce((s, f) => s + f.montantHT, 0);
   const totalTTC = filtered.reduce((s, f) => s + f.montantTTC, 0);
@@ -313,14 +427,14 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
           <table className="rom-table">
             <thead>
               <tr>
-                <th className="hidden sm:table-cell whitespace-nowrap">Date facture</th>
-                <th>N° Facture / Situation</th>
-                <th className="hidden sm:table-cell">Société</th>
-                <th className="hidden sm:table-cell whitespace-nowrap">Date validation AMO</th>
-                <th className="hidden sm:table-cell text-right">Montant HT</th>
-                <th className="text-right whitespace-nowrap">Montant TTC</th>
-                <th className="hidden sm:table-cell text-right">Retenue</th>
-                <th className="text-right whitespace-nowrap">% Avanc.</th>
+                <SortTh label="Date facture" sortKey="dateFacture" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+                <SortTh label="N° Facture / Situation" sortKey="factureOuSituation" sort={sort} onSort={toggle} />
+                <SortTh label="Société" sortKey="societe" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+                <SortTh label="Date validation AMO" sortKey="dateValidationAMO" sort={sort} onSort={toggle} className="hidden sm:table-cell" />
+                <SortTh label="Montant HT" sortKey="montantHT" sort={sort} onSort={toggle} className="hidden sm:table-cell text-right" align="right" />
+                <SortTh label="Montant TTC" sortKey="montantTTC" sort={sort} onSort={toggle} className="text-right" align="right" />
+                <SortTh label="Retenue" sortKey="retenueGarantie" sort={sort} onSort={toggle} className="hidden sm:table-cell text-right" align="right" />
+                <SortTh label="% Avanc." sortKey="pourcentageAvancementTotal" sort={sort} onSort={toggle} className="text-right" align="right" />
               </tr>
             </thead>
             <tbody>
@@ -332,15 +446,15 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
                   return (
                 <tr key={i} className={isSecondary ? 'bg-slate-50 text-slate-400' : undefined}>
                   <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
-                  <td className="font-medium text-xs">{f.factureOuSituation}</td>
-                  <td className="hidden sm:table-cell text-xs">{f.societe}</td>
+                  <td className="font-medium text-xs whitespace-nowrap">{f.factureOuSituation}</td>
+                  <td className="hidden sm:table-cell text-xs whitespace-nowrap">{f.societe}</td>
                   <td className="hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
                   <td className="hidden sm:table-cell text-right whitespace-nowrap">{fmt(f.montantHT)}</td>
                   <td className="text-right font-bold text-rom-600 whitespace-nowrap">{fmt(f.montantTTC)}</td>
-                  <td className="hidden sm:table-cell text-right text-xs text-gray-500">
+                  <td className="hidden sm:table-cell text-right text-xs text-gray-500 whitespace-nowrap">
                     {f.retenueGarantie > 0 ? `${f.retenueGarantie}%` : '—'}
                   </td>
-                  <td className="text-right">
+                  <td className="text-right whitespace-nowrap">
                     <span className={`text-xs font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
                       {f.pourcentageAvancementTotal}%
                     </span>
@@ -353,7 +467,7 @@ export function BordereauClient({ factures }: { factures: Facture[] }) {
             <tfoot>
               <tr className="bg-rom-600 text-white font-bold">
                 <td className="hidden sm:table-cell" />
-                <td className="px-4 py-3 text-sm">TOTAL ({filtered.length} fact.)</td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap">TOTAL ({filtered.length} fact.)</td>
                 <td className="hidden sm:table-cell" />
                 <td className="hidden sm:table-cell" />
                 <td className="hidden sm:table-cell px-4 py-3 text-right text-sm whitespace-nowrap">{fmt(totalHT)}</td>
