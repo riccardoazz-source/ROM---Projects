@@ -4,8 +4,9 @@
 import { NextResponse } from 'next/server';
 import { getConfig, saveConfig, getProjetById, saveProjet } from '@/lib/data';
 import { parseRapportFromPdf, extractPdf, extractMoisFromFilename, extractDateFromFilename, type PdfPage } from '@/lib/pdfParser';
+import { extractHistoriqueChart } from '@/lib/chartExtract';
 import { supabase } from '@/lib/db';
-import { RapportMensuel } from '@/types';
+import { RapportMensuel, HistoriquePoint } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -128,27 +129,38 @@ async function processFolder(
   projet.statut = termine ? 'termine' : 'en_cours';
   projet.rapports = [rapport];
 
-  // Normalize old-format labels ("AVR/26") to YYYY/MM on the fly
-  const normalizeLabel = (l: string): string => {
-    if (/^\d{4}\/\d{2}$/.test(l)) return l;
-    const ABBR: Record<string, string> = {
-      JAN:'01', FEV:'02', FÉV:'02', MAR:'03', AVR:'04', MAI:'05',
-      JUN:'06', JUI:'06', JUL:'07', AOÛ:'08', AOU:'08',
-      SEP:'09', OCT:'10', NOV:'11', DEC:'12', DÉC:'12',
-    };
-    const m = l.match(/^([A-ZÀ-Ü]{3})\/(\d{2})$/i);
-    if (!m) return l;
-    const mm = ABBR[m[1].toUpperCase()];
-    if (!mm) return l;
-    const yy = parseInt(m[2]);
-    return `${yy < 70 ? 2000 + yy : 1900 + yy}/${mm}`;
-  };
+  // Historic chart — reconstruct it from the PDF's own evolution graph, which
+  // already contains the full month-by-month history. If the graph can't be
+  // read, fall back to accumulating one point per imported report.
+  let chart: HistoriquePoint[] = [];
+  try {
+    chart = await extractHistoriqueChart(buffer, rapport.montantTotalCommandesHT, rapport.montantTotalFacturesHT);
+  } catch { chart = []; }
 
-  const history = (projet.historiqueChart ?? []).map(h => ({ ...h, date: normalizeLabel(h.date) }));
-  const newPoint = { date: label, montantCommandesHT: rapport.montantTotalCommandesHT, montantFacturesHT: rapport.montantTotalFacturesHT };
-  const hIdx = history.findIndex(h => h.date === label);
-  if (hIdx >= 0) history[hIdx] = newPoint; else history.push(newPoint);
-  projet.historiqueChart = history.sort((a, b) => a.date.localeCompare(b.date));
+  if (chart.length >= 2) {
+    projet.historiqueChart = chart;
+  } else {
+    // Fallback: accumulate. Normalize old-format labels ("AVR/26") to YYYY/MM.
+    const normalizeLabel = (l: string): string => {
+      if (/^\d{4}\/\d{2}$/.test(l)) return l;
+      const ABBR: Record<string, string> = {
+        JAN:'01', FEV:'02', FÉV:'02', MAR:'03', AVR:'04', MAI:'05',
+        JUN:'06', JUI:'06', JUL:'07', AOÛ:'08', AOU:'08',
+        SEP:'09', OCT:'10', NOV:'11', DEC:'12', DÉC:'12',
+      };
+      const m = l.match(/^([A-ZÀ-Ü]{3})\/(\d{2})$/i);
+      if (!m) return l;
+      const mm = ABBR[m[1].toUpperCase()];
+      if (!mm) return l;
+      const yy = parseInt(m[2]);
+      return `${yy < 70 ? 2000 + yy : 1900 + yy}/${mm}`;
+    };
+    const history = (projet.historiqueChart ?? []).map(h => ({ ...h, date: normalizeLabel(h.date) }));
+    const newPoint = { date: label, montantCommandesHT: rapport.montantTotalCommandesHT, montantFacturesHT: rapport.montantTotalFacturesHT };
+    const hIdx = history.findIndex(h => h.date === label);
+    if (hIdx >= 0) history[hIdx] = newPoint; else history.push(newPoint);
+    projet.historiqueChart = history.sort((a, b) => a.date.localeCompare(b.date));
+  }
 
   await saveProjet(projet);
 

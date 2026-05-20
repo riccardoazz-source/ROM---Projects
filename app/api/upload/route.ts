@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjetById, createOrGetProjet, addOrUpdateRapport, getDernierRapport } from '@/lib/data';
+import { getProjetById, createOrGetProjet, addOrUpdateRapport, getDernierRapport, saveProjet } from '@/lib/data';
 import { parseRapportFromPdf, extractPdf, extractMoisFromFilename, extractDateFromFilename, type PdfPage } from '@/lib/pdfParser';
+import { extractHistoriqueChart } from '@/lib/chartExtract';
 import { RapportMensuel } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,17 @@ export async function POST(req: NextRequest) {
     };
 
     await addOrUpdateRapport(projetId, rapport);
+
+    // Rebuild the historic chart from the PDF's own evolution graph.
+    try {
+      const chart = await extractHistoriqueChart(
+        buffer, rapport.montantTotalCommandesHT, rapport.montantTotalFacturesHT,
+      );
+      if (chart.length >= 2) {
+        const p = await getProjetById(projetId);
+        if (p) { p.historiqueChart = chart; await saveProjet(p); }
+      }
+    } catch { /* keep the point accumulated by addOrUpdateRapport */ }
 
     const nbCommandes = rapport.commandes.length;
     const nbFactures = rapport.factures.length;
