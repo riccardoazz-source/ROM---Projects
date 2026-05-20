@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, CheckCircle, XCircle, ExternalLink, Download, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, XCircle, ExternalLink, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Facture } from '@/types';
+import { useDataTable, Th, dateKey, type Getter } from '@/components/TableFilter';
 
 export interface FactureResult extends Facture {
   projetId: string;
@@ -17,163 +18,102 @@ function formatMontant(value: number): string {
   return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec + ' €';
 }
 
-const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-function dateToMonthKey(d: string): string {
-  if (!d || d.length < 10) return '';
-  return d.slice(3, 10); // "MM/YYYY" from "DD/MM/YYYY"
-}
-
-function monthKeyToLabel(key: string): string {
-  const [mm, yyyy] = key.split('/');
-  const idx = parseInt(mm, 10) - 1;
-  return idx >= 0 && idx < 12 ? `${MONTHS_FR[idx]} ${yyyy}` : key;
-}
-
-function sortMonthKeys(keys: string[]): string[] {
-  return [...keys].sort((a, b) => {
-    const [ma, ya] = a.split('/').map(Number);
-    const [mb, yb] = b.split('/').map(Number);
-    return (ya !== yb ? ya - yb : ma - mb);
-  });
-}
+const GETTERS: Record<string, Getter<FactureResult>> = {
+  dateFacture: (f) => dateKey(f.dateFacture),
+  factureOuSituation: (f) => f.factureOuSituation,
+  societe: (f) => f.societe,
+  projet: (f) => f.projetNom,
+  dateValidationAMO: (f) => dateKey(f.dateValidationAMO),
+  montantHT: (f) => f.montantHT,
+  montantTTC: (f) => f.montantTTC,
+  avancement: (f) => f.pourcentageAvancementTotal,
+};
 
 export default function FacturesClient({ factures }: { factures: FactureResult[] }) {
   const [search, setSearch] = useState('');
-  const [filterProjet, setFilterProjet] = useState('');
-  const [filterSociete, setFilterSociete] = useState('');
-  const [filterDateAMO, setFilterDateAMO] = useState('');
 
-  const projets = Array.from(new Set(factures.map(f => f.projetNom))).sort();
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return factures;
+    return factures.filter(
+      (f) =>
+        f.factureOuSituation.toLowerCase().includes(q) ||
+        f.societe.toLowerCase().includes(q) ||
+        f.projetNom.toLowerCase().includes(q) ||
+        f.client.toLowerCase().includes(q),
+    );
+  }, [factures, search]);
 
-  // Cascade: société options depend on selected projet
-  const facturesForProjet = filterProjet ? factures.filter(f => f.projetNom === filterProjet) : factures;
-  const societes = Array.from(new Set(facturesForProjet.map(f => f.societe))).sort();
+  const table = useDataTable(searched, GETTERS);
+  const rows = table.view;
 
-  // Cascade: date AMO options depend on selected projet + société
-  const facturesForSociete = filterSociete ? facturesForProjet.filter(f => f.societe === filterSociete) : facturesForProjet;
-  const datesAMO = sortMonthKeys(
-    Array.from(new Set(facturesForSociete.map(f => dateToMonthKey(f.dateValidationAMO)).filter(Boolean)))
-  );
-
-  const filtered = factures.filter(f => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      f.factureOuSituation.toLowerCase().includes(q) ||
-      f.societe.toLowerCase().includes(q) ||
-      f.projetNom.toLowerCase().includes(q) ||
-      f.client.toLowerCase().includes(q);
-    const matchProjet = !filterProjet || f.projetNom === filterProjet;
-    const matchSociete = !filterSociete || f.societe === filterSociete;
-    const matchDate = !filterDateAMO || dateToMonthKey(f.dateValidationAMO) === filterDateAMO;
-    return matchSearch && matchProjet && matchSociete && matchDate;
-  });
-
-  const totalHT = filtered.reduce((s, f) => s + f.montantHT, 0);
-  const totalTTC = filtered.reduce((s, f) => s + f.montantTTC, 0);
-
-  const hasFilters = !!(search || filterProjet || filterSociete || filterDateAMO);
-
-  const reset = () => { setSearch(''); setFilterProjet(''); setFilterSociete(''); setFilterDateAMO(''); };
+  const totalHT = rows.reduce((s, f) => s + f.montantHT, 0);
+  const totalTTC = rows.reduce((s, f) => s + f.montantTTC, 0);
 
   const exportCSV = () => {
-    const headers = ['Date facture', 'N° Facture', 'Société', 'Projet', 'Client', 'Date validation AMO', 'Montant HT', 'Montant TTC', 'Retenue', '% Commande', '% Avancement'];
-    const rows = filtered.map(f => [
+    const headers = ['Date facture', 'N° Facture', 'Société', 'Projet', 'Client', 'Date validation AMO', 'Montant HT', 'Montant TTC', '% Avancement'];
+    const data = rows.map((f) => [
       f.dateFacture, f.factureOuSituation, f.societe, f.projetNom, f.client,
-      f.dateValidationAMO, f.montantHT.toFixed(2), f.montantTTC.toFixed(2),
-      f.retenueGarantie.toFixed(2), `${f.pourcentageFactureSurCommande}%`, `${f.pourcentageAvancementTotal}%`
+      f.dateValidationAMO, f.montantHT.toFixed(2), f.montantTTC.toFixed(2), `${f.pourcentageAvancementTotal}%`,
     ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(';')).join('\n');
+    const csv = [headers, ...data].map((r) => r.map((v) => `"${v}"`).join(';')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'factures.csv'; a.click();
+    const a = document.createElement('a');
+    a.href = url; a.download = 'factures.csv'; a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recherche de factures</h1>
           <p className="text-gray-500 mt-1 text-sm">
-            Consultez et recherchez toutes les factures validées de tous les projets
+            Triez et filtrez chaque colonne — cliquez l&apos;en-tête pour trier, l&apos;entonnoir pour filtrer
           </p>
         </div>
         <button
           onClick={exportCSV}
-          disabled={filtered.length === 0}
-          className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+          disabled={rows.length === 0}
+          className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-rom-50 disabled:opacity-40 transition-colors"
         >
           <Download className="w-4 h-4" /> Export CSV
         </button>
       </div>
 
-      <div className="rom-card p-5 mb-6">
-        <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher par N° facture, société, projet..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rom-500 focus:border-transparent"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <XCircle className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex gap-3 flex-wrap items-center">
-            <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            {/* Projet */}
-            <select
-              value={filterProjet}
-              onChange={e => { setFilterProjet(e.target.value); setFilterSociete(''); setFilterDateAMO(''); }}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
-            >
-              <option value="">Tous les projets</option>
-              {projets.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            {/* Société — filtered by projet */}
-            <select
-              value={filterSociete}
-              onChange={e => { setFilterSociete(e.target.value); setFilterDateAMO(''); }}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
-            >
-              <option value="">Toutes les sociétés</option>
-              {societes.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            {/* Date validation AMO — filtered by projet + société */}
-            <div className="relative flex items-center">
-              <Calendar className="absolute left-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-              <select
-                value={filterDateAMO}
-                onChange={e => setFilterDateAMO(e.target.value)}
-                className="border border-gray-200 rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500"
-              >
-                <option value="">Toutes les dates AMO</option>
-                {datesAMO.map(d => (
-                  <option key={d} value={d}>{monthKeyToLabel(d)}</option>
-                ))}
-              </select>
-            </div>
-            {hasFilters && (
-              <button onClick={reset} className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1">
-                <XCircle className="w-4 h-4" /> Réinitialiser
-              </button>
-            )}
-          </div>
+      <div className="rom-card p-4 mb-5 flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher par N° facture, société, projet…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-9 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rom-500"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <XCircle className="w-4 h-4" />
+            </button>
+          )}
         </div>
+        {(search || table.activeFilters > 0) && (
+          <button
+            onClick={() => { setSearch(''); table.clearFilters(); }}
+            className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 self-start sm:self-auto"
+          >
+            <XCircle className="w-4 h-4" /> Réinitialiser{table.activeFilters > 0 ? ` (${table.activeFilters})` : ''}
+          </button>
+        )}
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <p className="text-sm text-gray-600">
-          <span className="font-bold text-gray-900">{filtered.length}</span> facture{filtered.length !== 1 ? 's' : ''} trouvée{filtered.length !== 1 ? 's' : ''}
-          {filtered.length !== factures.length && ` sur ${factures.length}`}
+          <span className="font-bold text-gray-900">{rows.length}</span> facture{rows.length !== 1 ? 's' : ''}
+          {rows.length !== factures.length && ` sur ${factures.length}`}
         </p>
-        {filtered.length > 0 && (
+        {rows.length > 0 && (
           <p className="text-sm text-gray-600">
             Total HT : <span className="font-bold">{formatMontant(totalHT)}</span> ·
             TTC : <span className="font-bold text-rom-600">{formatMontant(totalTTC)}</span>
@@ -181,57 +121,51 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rom-card p-12 text-center">
           <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Aucune facture trouvée</p>
-          <p className="text-gray-400 text-sm mt-1">Modifiez vos critères de recherche</p>
+          <p className="text-gray-400 text-sm mt-1">Modifiez la recherche ou les filtres de colonne</p>
         </div>
       ) : (
         <div className="rom-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="rom-table">
+            <table className="rom-table compact">
               <thead>
                 <tr>
-                  <th>Date facture</th>
-                  <th>N° Facture / Situation</th>
-                  <th>Société</th>
-                  <th>Projet</th>
-                  <th>Date validation AMO</th>
-                  <th className="text-right">Montant HT</th>
-                  <th className="text-right">Montant TTC</th>
-                  <th className="text-right">% Avancement</th>
-                  <th>Statut</th>
+                  <Th label="Date" colKey="dateFacture" table={table} filterable={false} />
+                  <Th label="N° Facture" colKey="factureOuSituation" table={table} filterable={false} />
+                  <Th label="Société" colKey="societe" table={table} />
+                  <Th label="Projet" colKey="projet" table={table} />
+                  <Th label="Validation AMO" colKey="dateValidationAMO" table={table} filterable={false} />
+                  <Th label="Montant HT" colKey="montantHT" table={table} align="right" className="text-right" filterable={false} />
+                  <Th label="Montant TTC" colKey="montantTTC" table={table} align="right" className="text-right" filterable={false} />
+                  <Th label="% Avanc." colKey="avancement" table={table} align="right" className="text-right" />
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((f, i) => (
+                {rows.map((f, i) => (
                   <tr key={i}>
-                    <td className="text-gray-500 text-xs whitespace-nowrap">{f.dateFacture}</td>
-                    <td className="font-medium text-sm">{f.factureOuSituation}</td>
+                    <td className="text-gray-500 whitespace-nowrap">{f.dateFacture}</td>
+                    <td className="font-medium text-gray-800">{f.factureOuSituation}</td>
                     <td className="font-medium">{f.societe}</td>
                     <td>
-                      <Link href={`/projet/${f.projetId}`} className="text-rom-600 hover:underline text-sm font-medium">
+                      <Link href={`/projet/${f.projetId}`} className="text-rom-600 hover:underline font-medium">
                         {f.projetNom}
                       </Link>
-                      <p className="text-xs text-gray-400">{f.client}</p>
+                      <p className="text-[10px] text-gray-400">{f.client}</p>
                     </td>
-                    <td className="text-gray-500 text-xs whitespace-nowrap">{f.dateValidationAMO}</td>
-                    <td className="text-right font-medium">{formatMontant(f.montantHT)}</td>
-                    <td className="text-right font-bold text-rom-600">{formatMontant(f.montantTTC)}</td>
+                    <td className="text-gray-500 whitespace-nowrap">{f.dateValidationAMO}</td>
+                    <td className="text-right font-medium whitespace-nowrap">{formatMontant(f.montantHT)}</td>
+                    <td className="text-right font-bold text-rom-600 whitespace-nowrap">{formatMontant(f.montantTTC)}</td>
                     <td className="text-right">
-                      <span className={`text-xs font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                      <span className={`font-bold ${f.pourcentageAvancementTotal === 100 ? 'text-green-600' : 'text-blue-600'}`}>
                         {f.pourcentageAvancementTotal}%
                       </span>
                     </td>
                     <td>
-                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                        <CheckCircle className="w-3 h-3" /> Validée
-                      </span>
-                    </td>
-                    <td>
-                      <Link href={`/projet/${f.projetId}`} className="text-gray-400 hover:text-rom-600">
+                      <Link href={`/projet/${f.projetId}`} className="text-gray-300 hover:text-rom-600">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </Link>
                     </td>
@@ -240,10 +174,10 @@ export default function FacturesClient({ factures }: { factures: FactureResult[]
               </tbody>
               <tfoot>
                 <tr className="bg-rom-600 text-white font-bold">
-                  <td colSpan={5}>TOTAL ({filtered.length} factures)</td>
+                  <td colSpan={5}>TOTAL ({rows.length} factures)</td>
                   <td className="text-right">{formatMontant(totalHT)}</td>
                   <td className="text-right">{formatMontant(totalTTC)}</td>
-                  <td colSpan={3} />
+                  <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>

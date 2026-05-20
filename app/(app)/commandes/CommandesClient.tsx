@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, XCircle, ExternalLink, TrendingUp } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, XCircle, ExternalLink, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import ProgressBar from '@/components/ProgressBar';
+import { useDataTable, Th, type Getter } from '@/components/TableFilter';
 
 export interface CommandeResult {
   societe: string;
@@ -35,125 +36,99 @@ const TYPE_COLORS: Record<string, string> = {
   divers: 'bg-green-100 text-green-700 border-green-200',
 };
 
+const GETTERS: Record<string, Getter<CommandeResult>> = {
+  societe: (c) => c.societe,
+  lot: (c) => c.lot || '—',
+  type: (c) => TYPE_LABELS[c.type],
+  projet: (c) => c.projetNom,
+  montantHT: (c) => c.montantHT,
+  valeurHtRestante: (c) => c.valeurHtRestante,
+  avancement: (c) => c.pourcentageAvancement,
+};
+
 export default function CommandesClient({ commandes }: { commandes: CommandeResult[] }) {
   const [search, setSearch] = useState('');
-  const [filterProjet, setFilterProjet] = useState('');
-  const [filterLot, setFilterLot] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterAvancement, setFilterAvancement] = useState('');
 
-  const projets = Array.from(new Set(commandes.map(c => c.projetNom))).sort();
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return commandes;
+    return commandes.filter(
+      (c) =>
+        c.societe.toLowerCase().includes(q) ||
+        c.lot.toLowerCase().includes(q) ||
+        c.projetNom.toLowerCase().includes(q) ||
+        c.client.toLowerCase().includes(q),
+    );
+  }, [commandes, search]);
 
-  // LOT options cascade on projet selection
-  const commandesForProjet = filterProjet ? commandes.filter(c => c.projetNom === filterProjet) : commandes;
-  const lots = Array.from(new Set(commandesForProjet.map(c => c.lot).filter(Boolean))).sort();
+  const table = useDataTable(searched, GETTERS);
+  const rows = table.view;
 
-  const filtered = commandes.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      c.societe.toLowerCase().includes(q) ||
-      c.lot.toLowerCase().includes(q) ||
-      c.projetNom.toLowerCase().includes(q);
-    const matchProjet = !filterProjet || c.projetNom === filterProjet;
-    const matchLot = !filterLot || c.lot === filterLot;
-    const matchType = !filterType || c.type === filterType;
-    const matchAvance =
-      filterAvancement === '' ? true :
-      filterAvancement === 'done' ? c.pourcentageAvancement === 100 :
-      filterAvancement === 'partial' ? c.pourcentageAvancement > 0 && c.pourcentageAvancement < 100 :
-      filterAvancement === 'none' ? c.pourcentageAvancement === 0 : true;
-    return matchSearch && matchProjet && matchLot && matchType && matchAvance;
-  });
-
-  const totalHT = filtered.reduce((s, c) => s + c.montantHT, 0);
-  const totalRestant = filtered.reduce((s, c) => s + c.valeurHtRestante, 0);
+  const totalHT = rows.reduce((s, c) => s + c.montantHT, 0);
+  const totalRestant = rows.reduce((s, c) => s + c.valeurHtRestante, 0);
 
   const exportCSV = () => {
     const headers = ['Société', 'LOT / Mission', 'Type', 'Projet', 'Client', 'Montant HT', 'Valeur restante HT', '% Avancement'];
-    const rows = filtered.map(c => [
+    const data = rows.map((c) => [
       c.societe, c.lot, TYPE_LABELS[c.type], c.projetNom, c.client,
-      c.montantHT.toFixed(2), c.valeurHtRestante.toFixed(2), `${c.pourcentageAvancement}%`
+      c.montantHT.toFixed(2), c.valeurHtRestante.toFixed(2), `${c.pourcentageAvancement}%`,
     ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(';')).join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const csv = [headers, ...data].map((r) => r.map((v) => `"${v}"`).join(';')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'commandes.csv'; a.click();
+    const a = document.createElement('a');
+    a.href = url; a.download = 'commandes.csv'; a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recherche de commandes</h1>
-          <p className="text-gray-500 mt-1 text-sm">Consultez et filtrez toutes les commandes par projet, société ou type</p>
+          <p className="text-gray-500 mt-1 text-sm">
+            Triez et filtrez chaque colonne — cliquez l&apos;en-tête pour trier, l&apos;entonnoir pour filtrer
+          </p>
         </div>
         <button
           onClick={exportCSV}
-          disabled={filtered.length === 0}
+          disabled={rows.length === 0}
           className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-rom-700 text-rom-700 hover:bg-rom-50 disabled:opacity-40 transition-colors"
         >
           ↓ Export CSV
         </button>
       </div>
 
-      <div className="rom-card p-5 mb-6">
-        <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher par société, LOT, mission, projet..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rom-500"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <XCircle className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex gap-3 flex-wrap items-center">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <select value={filterProjet} onChange={e => { setFilterProjet(e.target.value); setFilterLot(''); }}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
-              <option value="">Tous les projets</option>
-              {projets.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select value={filterLot} onChange={e => setFilterLot(e.target.value)}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
-              <option value="">Tous les LOTs / Missions</option>
-              {lots.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
-            <select value={filterType} onChange={e => setFilterType(e.target.value)}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
-              <option value="">Tous les types</option>
-              <option value="honoraires">Honoraires</option>
-              <option value="travaux">Travaux</option>
-              <option value="divers">Divers</option>
-            </select>
-            <select value={filterAvancement} onChange={e => setFilterAvancement(e.target.value)}
-              className="border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rom-500">
-              <option value="">Tous les avancements</option>
-              <option value="done">Terminé (100%)</option>
-              <option value="partial">En cours (1–99%)</option>
-              <option value="none">Non démarré (0%)</option>
-            </select>
-            {(search || filterProjet || filterLot || filterType || filterAvancement) && (
-              <button onClick={() => { setSearch(''); setFilterProjet(''); setFilterLot(''); setFilterType(''); setFilterAvancement(''); }}
-                className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1">
-                <XCircle className="w-4 h-4" /> Réinitialiser
-              </button>
-            )}
-          </div>
+      <div className="rom-card p-4 mb-5 flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher par société, LOT, projet…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-9 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rom-500"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <XCircle className="w-4 h-4" />
+            </button>
+          )}
         </div>
+        {(search || table.activeFilters > 0) && (
+          <button
+            onClick={() => { setSearch(''); table.clearFilters(); }}
+            className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 self-start sm:self-auto"
+          >
+            <XCircle className="w-4 h-4" /> Réinitialiser{table.activeFilters > 0 ? ` (${table.activeFilters})` : ''}
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
         <div className="rom-card p-3 sm:p-4 bg-blue-50">
-          <p className="text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Filtrées</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900">{filtered.length}</p>
+          <p className="text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Affichées</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{rows.length}</p>
         </div>
         <div className="rom-card p-3 sm:p-4 bg-slate-50">
           <p className="text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Total HT</p>
@@ -165,47 +140,47 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rom-card p-12 text-center">
           <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Aucune commande trouvée</p>
-          <p className="text-gray-400 text-sm mt-1">Modifiez vos critères de recherche</p>
+          <p className="text-gray-400 text-sm mt-1">Modifiez la recherche ou les filtres de colonne</p>
         </div>
       ) : (
         <div className="rom-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="rom-table">
+            <table className="rom-table compact">
               <thead>
                 <tr>
-                  <th>Société</th>
-                  <th>LOT / Mission</th>
-                  <th>Type</th>
-                  <th>Projet</th>
-                  <th className="text-right">Montant HT</th>
-                  <th className="text-right">Valeur restante</th>
-                  <th style={{ width: 200 }}>% Avancement</th>
+                  <Th label="Société" colKey="societe" table={table} />
+                  <Th label="LOT / Mission" colKey="lot" table={table} />
+                  <Th label="Type" colKey="type" table={table} />
+                  <Th label="Projet" colKey="projet" table={table} />
+                  <Th label="Montant HT" colKey="montantHT" table={table} align="right" className="text-right" filterable={false} />
+                  <Th label="Restante" colKey="valeurHtRestante" table={table} align="right" className="text-right" filterable={false} />
+                  <Th label="% Avanc." colKey="avancement" table={table} style={{ width: 170 }} />
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c, i) => (
+                {rows.map((c, i) => (
                   <tr key={i}>
                     <td className="font-semibold text-gray-900">{c.societe}</td>
-                    <td className="text-gray-600">{c.lot}</td>
+                    <td className="text-gray-600">{c.lot || '—'}</td>
                     <td>
-                      <span className={`badge-avancement border ${TYPE_COLORS[c.type]}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded-full border text-[10px] font-semibold ${TYPE_COLORS[c.type]}`}>
                         {TYPE_LABELS[c.type]}
                       </span>
                     </td>
                     <td>
-                      <Link href={`/projet/${c.projetId}`} className="text-rom-700 font-medium hover:underline text-sm">
+                      <Link href={`/projet/${c.projetId}`} className="text-rom-700 font-medium hover:underline">
                         {c.projetNom}
                       </Link>
-                      <p className="text-xs text-gray-400">{c.client}</p>
+                      <p className="text-[10px] text-gray-400">{c.client}</p>
                     </td>
-                    <td className="text-right font-medium">{fmt(c.montantHT)}</td>
-                    <td className="text-right">
-                      <span className={c.valeurHtRestante === 0 ? 'text-gray-400 text-sm' : 'text-orange-600 font-semibold text-sm'}>
+                    <td className="text-right font-medium whitespace-nowrap">{fmt(c.montantHT)}</td>
+                    <td className="text-right whitespace-nowrap">
+                      <span className={c.valeurHtRestante === 0 ? 'text-gray-400' : 'text-orange-600 font-semibold'}>
                         {fmt(c.valeurHtRestante)}
                       </span>
                     </td>
@@ -226,7 +201,7 @@ export default function CommandesClient({ commandes }: { commandes: CommandeResu
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={4}>TOTAL ({filtered.length} commandes)</td>
+                  <td colSpan={4}>TOTAL ({rows.length} commandes)</td>
                   <td className="text-right">{fmt(totalHT)}</td>
                   <td className="text-right">{fmt(totalRestant)}</td>
                   <td colSpan={2} />

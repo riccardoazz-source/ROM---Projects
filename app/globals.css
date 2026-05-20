@@ -67,6 +67,11 @@ body {
 .rom-table tfoot tr { background: var(--rom-800); }
 .rom-table tfoot td { @apply px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white border-0; }
 
+/* Compact variant — denser rows so wide tables fit without scrolling */
+.rom-table.compact th { @apply px-2 py-1.5 text-[10px]; }
+.rom-table.compact td { @apply px-2 py-1 text-[11px]; }
+.rom-table.compact tfoot td { @apply px-2 py-1.5 text-[11px]; }
+
 /* ── Badges ── */
 .badge {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
