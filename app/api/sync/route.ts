@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getConfig, saveConfig, createOrGetProjet, addOrUpdateRapport, getProjetById } from '@/lib/data';
-import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
+import { parseRapportFromPdf, extractPdf, extractMoisFromFilename, extractDateFromFilename, type PdfPage } from '@/lib/pdfParser';
 import { supabase } from '@/lib/db';
 import { RapportMensuel } from '@/types';
 
@@ -107,12 +107,13 @@ export async function GET() {
           continue;
         }
 
-        // Extract text from PDF
+        // Extract text + per-item positions from PDF
         let extractedText = '';
+        let pages: PdfPage[] = [];
         try {
-          const pdfParse = (await import('pdf-parse')).default;
-          const pdfData = await pdfParse(buffer);
-          extractedText = pdfData.text;
+          const extracted = await extractPdf(buffer);
+          extractedText = extracted.text;
+          pages = extracted.pages;
         } catch (e) {
           errors++;
           log.push(`[${folder.name}] Erreur lecture PDF: ${e instanceof Error ? e.message : String(e)}`);
@@ -123,7 +124,7 @@ export async function GET() {
         const filename = latest.name;
         const mois = extractMoisFromFilename(filename);
         const date = extractDateFromFilename(filename);
-        const parsed = extractedText ? parseRapportFromPdf(extractedText, filename) : {};
+        const parsed = extractedText ? parseRapportFromPdf(extractedText, filename, pages) : {};
 
         const rapport: RapportMensuel = {
           date,
@@ -148,6 +149,7 @@ export async function GET() {
           commandes:    parsed.commandes    ?? [],
           factures:     parsed.factures     ?? [],
           facturesMois: parsed.facturesMois ?? [],
+          budget:       parsed.budget       ?? undefined,
         };
 
         // Save to Supabase

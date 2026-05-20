@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjetById, createOrGetProjet, addOrUpdateRapport, getDernierRapport } from '@/lib/data';
-import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
+import { parseRapportFromPdf, extractPdf, extractMoisFromFilename, extractDateFromFilename, type PdfPage } from '@/lib/pdfParser';
 import { RapportMensuel } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +25,11 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     let extractedText = '';
+    let pages: PdfPage[] = [];
     try {
-      const pdfParse = (await import('pdf-parse')).default;
-      const pdfData = await pdfParse(buffer);
-      extractedText = pdfData.text;
+      const extracted = await extractPdf(buffer);
+      extractedText = extracted.text;
+      pages = extracted.pages;
     } catch (e) {
       console.error('PDF parse error:', e);
     }
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     const date = extractDateFromFilename(filename);
 
     // Parse the PDF content
-    const parsed = extractedText ? parseRapportFromPdf(extractedText, filename) : {};
+    const parsed = extractedText ? parseRapportFromPdf(extractedText, filename, pages) : {};
 
     const rapport: RapportMensuel = {
       date,
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       commandes: parsed.commandes ?? [],
       factures: parsed.factures ?? [],
       facturesMois: parsed.facturesMois ?? [],
+      budget: parsed.budget ?? undefined,
     };
 
     await addOrUpdateRapport(projetId, rapport);

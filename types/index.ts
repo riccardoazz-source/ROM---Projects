@@ -1,12 +1,20 @@
 export interface BudgetLigne {
   libelle: string;
   type: 'section' | 'item' | 'total';
-  valeurs: number[];
+  cellules: string[];   // display strings, one per colonne ('' = empty cell)
+  valeurs?: number[];   // numeric mirror of cellules (legacy / charts)
+}
+
+export interface BudgetGroupe {
+  label: string;
+  debut: number;   // index into colonnes where the group starts
+  span: number;    // number of colonnes the group covers
 }
 
 export interface BudgetTable {
   titre: string;
   colonnes: string[];
+  groupes?: BudgetGroupe[];   // optional spanning headers above colonnes
   lignes: BudgetLigne[];
 }
 

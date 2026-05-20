@@ -3,7 +3,7 @@
  */
 import { NextResponse } from 'next/server';
 import { getConfig, saveConfig, getProjetById, saveProjet } from '@/lib/data';
-import { parseRapportFromPdf, extractMoisFromFilename, extractDateFromFilename } from '@/lib/pdfParser';
+import { parseRapportFromPdf, extractPdf, extractMoisFromFilename, extractDateFromFilename, type PdfPage } from '@/lib/pdfParser';
 import { supabase } from '@/lib/db';
 import { RapportMensuel } from '@/types';
 
@@ -68,12 +68,13 @@ async function processFolder(
   const buffer = await downloadPdf(latest.id, apiKey);
   if (!buffer) return { ok: false, msg: `[${folder.name}] Téléchargement échoué: ${latest.name}` };
 
-  // Parse PDF text
+  // Parse PDF text + per-item positions (positions feed the budget grid parser)
   let text = '';
+  let pages: PdfPage[] = [];
   try {
-    const pdfParse = (await import('pdf-parse')).default;
-    const pdfData = await pdfParse(buffer);
-    text = pdfData.text;
+    const extracted = await extractPdf(buffer);
+    text = extracted.text;
+    pages = extracted.pages;
   } catch (e) {
     return { ok: false, msg: `[${folder.name}] Erreur PDF: ${e instanceof Error ? e.message : String(e)}` };
   }
@@ -81,7 +82,7 @@ async function processFolder(
   // Parse rapport
   const mois = extractMoisFromFilename(latest.name);
   const date = extractDateFromFilename(latest.name);
-  const parsed = text ? parseRapportFromPdf(text, latest.name) : {};
+  const parsed = text ? parseRapportFromPdf(text, latest.name, pages) : {};
 
   const rapport: RapportMensuel = {
     date,

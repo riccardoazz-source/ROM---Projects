@@ -5,6 +5,7 @@ import TypesCommandesChart from '@/components/charts/TypesCommandesChart';
 import AvancementBarChart from '@/components/charts/AvancementBarChart';
 import ProjetNav from '@/components/ProjetNav';
 import BudgetRefreshButton from '@/components/BudgetRefreshButton';
+import BudgetTableView from '@/components/BudgetTableView';
 import ScrollTableLeft from '@/components/ScrollTableLeft';
 import { CommandesTableClient, FacturesListClient, BordereauClient } from '@/app/(app)/projet/[id]/ProjetSections';
 import { formatMontantHT } from '@/lib/data';
@@ -138,44 +139,7 @@ export default function ProjetPageContent({ rapport, chartData, budgetExists, bu
             </div>
           ) : (
             <ScrollTableLeft>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-4 py-2 text-left font-semibold text-gray-600 min-w-[180px]">Libellé</th>
-                    {rapport.budget!.colonnes.map((col, i) => (
-                      <th key={i} className="px-4 py-2 text-right font-semibold text-gray-600 whitespace-nowrap">{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rapport.budget!.lignes.map((ligne, i) => {
-                    if (ligne.type === 'section') return (
-                      <tr key={i} className="bg-rom-50 border-t border-b border-rom-100">
-                        <td colSpan={(rapport.budget!.colonnes.length || 0) + 1}
-                          className="px-4 py-2 font-bold text-rom-700 uppercase tracking-wide text-[11px]">
-                          {ligne.libelle}
-                        </td>
-                      </tr>
-                    );
-                    if (ligne.type === 'total') return (
-                      <tr key={i} className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
-                        <td className="px-4 py-2 text-gray-800">{ligne.libelle}</td>
-                        {ligne.valeurs.map((v, j) => (
-                          <td key={j} className="px-4 py-2 text-right tabular-nums text-gray-800">{v !== 0 ? formatMontantHT(v) : '—'}</td>
-                        ))}
-                      </tr>
-                    );
-                    return (
-                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-600">{ligne.libelle}</td>
-                        {ligne.valeurs.map((v, j) => (
-                          <td key={j} className="px-4 py-2 text-right tabular-nums text-gray-700">{v !== 0 ? formatMontantHT(v) : ''}</td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <BudgetTableView budget={rapport.budget!} />
             </ScrollTableLeft>
           )}
         </div>

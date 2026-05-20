@@ -1,4 +1,7 @@
 import { RapportMensuel, Commande, Facture, FactureMois, BudgetLigne, BudgetTable } from '@/types';
+import { parseBudgetFromPages, PdfPage } from './budgetLayout';
+
+export type { PdfPage } from './budgetLayout';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -7,6 +10,21 @@ function parseMontant(s: string): number {
   // French format: "1 234 567,89" – remove spaces, replace comma with dot
   const cleaned = s.replace(/\s/g, '').replace(',', '.');
   return parseFloat(cleaned.replace(/[^0-9.]/g, '')) || 0;
+}
+
+// French display format for a budget amount: 1234567.89 → "1 234 567,89" (0 → '').
+function formatBudgetCell(n: number): string {
+  if (!n) return '';
+  const neg = n < 0;
+  const [int, dec] = Math.abs(n).toFixed(2).split('.');
+  return (neg ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + dec;
+}
+
+// Internal row shape used while building the text-fallback budget table.
+interface RawLigne {
+  libelle: string;
+  type: BudgetLigne['type'];
+  valeurs: number[];
 }
 
 export function extractMoisFromFilename(filename: string): string {
@@ -699,7 +717,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   }
 
   // Parse data rows
-  const lignes: BudgetLigne[] = [];
+  const lignes: RawLigne[] = [];
   // Lines that are only repeated "Total HT" or header concatenations are noise
   const HEADER_NOISE = /^(?:\s*(?:total\s*ht|intitulés?|programme|aps|ape|apd|dce\s*(?:ind\.?)?\s*\d*|marche|ts|entreprise|estimation|conception|execution)\s*){2,}$/i;
   // Split a spurious subtotal row number glued to the first amount by pdf-parse:
@@ -745,7 +763,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   const PROJECT_CODE_RE = /^[A-Z][A-Z0-9]*\d[A-Z0-9]*$|^\d[A-Z0-9]*[A-Z][A-Z0-9]*$/;
   const stripAccents = (s: string) =>
     s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const cleaned: BudgetLigne[] = [];
+  const cleaned: RawLigne[] = [];
   for (let i = 0; i < lignes.length; ) {
     if (lignes[i].type !== 'section') { cleaned.push(lignes[i]); i++; continue; }
     let j = i;
@@ -772,7 +790,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
   // row with libellé '—' (amounts only, no label). This happens when pdf-parse extracts
   // a row's label and its amounts on separate lines. Merge them into one correctly-typed row.
   // Guard: never merge generic section-header labels (Travaux, Honoraires, Divers…).
-  const mergedLignes: BudgetLigne[] = [];
+  const mergedLignes: RawLigne[] = [];
   for (let i = 0; i < lignes.length; i++) {
     const curr = lignes[i];
     const next = lignes[i + 1];
@@ -836,7 +854,50 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
     }
   }
 
-  return { titre, colonnes, lignes };
+  return {
+    titre,
+    colonnes,
+    lignes: lignes.map(r => ({
+      libelle: r.libelle,
+      type: r.type,
+      valeurs: r.valeurs,
+      cellules: r.valeurs.map(formatBudgetCell),
+    })),
+  };
+}
+
+// ─── PDF text + position extraction ──────────────────────────────────────────
+
+/**
+ * Run pdf-parse with a custom pagerender that keeps both the flat text (for the
+ * commandes/factures parsers) and per-item x/y coordinates per page (for the
+ * position-aware budget parser).
+ */
+export async function extractPdf(buffer: Buffer): Promise<{ text: string; pages: PdfPage[] }> {
+  const pdfParse = (await import('pdf-parse')).default;
+  const pages: PdfPage[] = [];
+  const pagerender = (pageData: {
+    getTextContent: (o: object) => Promise<{ items: Array<{ str: string; width?: number; transform: number[] }> }>;
+  }) =>
+    pageData
+      .getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })
+      .then(tc => {
+        const items: PdfPage = [];
+        let text = '';
+        let lastY: number | undefined;
+        for (const it of tc.items) {
+          const x = it.transform[4];
+          const y = it.transform[5];
+          items.push({ str: it.str, x, y, w: it.width ?? 0 });
+          if (lastY === y || lastY === undefined) text += it.str;
+          else text += '\n' + it.str;
+          lastY = y;
+        }
+        pages.push(items);
+        return text;
+      });
+  const data = await pdfParse(buffer, { pagerender });
+  return { text: data.text, pages };
 }
 
 // ─── Main parser ─────────────────────────────────────────────────────────────
@@ -844,6 +905,7 @@ function parseBudgetTable(rawText: string): BudgetTable | undefined {
 export function parseRapportFromPdf(
   text: string,
   filename: string,
+  pages?: PdfPage[],
 ): Partial<RapportMensuel> {
   const PAGE_BREAK = 'Bordereau de transmission';
   const SECTION_ENDS = [PAGE_BREAK, 'Budget'];
@@ -1054,7 +1116,14 @@ export function parseRapportFromPdf(
   if (!budgetRaw) budgetRaw = findBudgetRaw(text);
   // Final fallback: PDFs without an explicit "Budget" title
   if (!budgetRaw) budgetRaw = findBudgetRawByPosition(text);
-  const budget = budgetRaw ? parseBudgetTable(budgetRaw) : undefined;
+
+  // Budget: prefer the position-aware parser (reconstructs the real column grid
+  // from x/y coordinates); fall back to the text-stream parser if unavailable.
+  let budget: BudgetTable | undefined;
+  if (budgetRaw && pages && pages.length > 0) {
+    try { budget = parseBudgetFromPages(pages, budgetRaw); } catch { budget = undefined; }
+  }
+  if (!budget && budgetRaw) budget = parseBudgetTable(budgetRaw);
 
   return {
     ...totals,

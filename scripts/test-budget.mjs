@@ -1,31 +1,32 @@
 /**
- * Budget parser test - run with: node scripts/test-budget.mjs
+ * Budget parser test - run with: npx tsx scripts/test-budget.mjs
  */
-import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { parseRapportFromPdf } from '../lib/pdfParser.ts';
+import { parseRapportFromPdf, extractPdf } from '../lib/pdfParser.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = resolve(__dirname, '../data');
-const pdfs = fs.readdirSync(dataDir).filter(f => f.endsWith('.pdf'));
+const only = process.argv[2];
+const pdfs = fs.readdirSync(dataDir).filter(f => f.endsWith('.pdf') && (!only || f.includes(only)));
 
 for (const pdf of pdfs) {
-  const pdfPath = resolve(dataDir, pdf);
-  const buf = fs.readFileSync(pdfPath);
-  const data = await pdfParse(buf);
-  const result = parseRapportFromPdf(data.text, pdf);
+  const buf = fs.readFileSync(resolve(dataDir, pdf));
+  const { text, pages } = await extractPdf(buf);
+  const result = parseRapportFromPdf(text, pdf, pages);
 
   const name = pdf.split(' - ')[1] || pdf;
   if (result.budget) {
     const b = result.budget;
     console.log('\n=== ' + name + ' ===');
-    console.log('cols:', b.colonnes.join(' | '));
+    if (b.titre) console.log('titre:', b.titre);
+    if (b.groupes) console.log('groupes:', b.groupes.map(g => `${g.label}[${g.debut}+${g.span}]`).join('  '));
+    console.log('colonnes:', b.colonnes.map((c, i) => `${i}:${c || '∅'}`).join(' | '));
     console.log('lignes:', b.lignes.length);
     for (const l of b.lignes) {
-      const vals = l.valeurs.filter(v => v !== 0).join(' | ');
-      console.log('[' + l.type + '] ' + l.libelle + (vals ? ' → ' + vals : ''));
+      const cells = (l.cellules || []).map(c => c || '·').join(' | ');
+      console.log(`  [${l.type}] ${l.libelle}  »  ${cells}`);
     }
   } else {
     console.log('\n=== ' + name + ' === NO BUDGET');
